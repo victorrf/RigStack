@@ -17,6 +17,11 @@ func New(nodes *postgres.NodeStore) *Scheduler {
 	return &Scheduler{nodes: nodes}
 }
 
+// HealthyNodes retorna todos os nodes saudáveis.
+func (s *Scheduler) HealthyNodes(ctx context.Context) ([]postgres.Node, error) {
+	return s.nodes.GetHealthy(ctx)
+}
+
 // PickNode retorna o node mais adequado para receber uma VM com os requisitos dados.
 // minRAMBytes: RAM mínima necessária (0 = sem requisito).
 func (s *Scheduler) PickNode(ctx context.Context, minRAMBytes int64) (*postgres.Node, error) {

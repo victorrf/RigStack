@@ -54,6 +54,15 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
+export interface ApiImage {
+  id: string
+  name: string
+  os: string
+  version: string
+  url: string
+  size_gb: number
+}
+
 export const api = {
   nodes: {
     list: () => req<ApiNode[]>('/api/v1/nodes'),
@@ -68,6 +77,11 @@ export const api = {
         body: JSON.stringify({ name, cidr }),
       }),
     delete: (id: string) => req<void>(`/api/v1/vpcs/${id}`, { method: 'DELETE' }),
+  },
+
+  images: {
+    list: () => req<ApiImage[]>('/api/v1/images'),
+    deploy: (id: string) => req<{ queued: boolean; nodes: string[] }>(`/api/v1/images/${id}/deploy`, { method: 'POST' }),
   },
 
   instances: {

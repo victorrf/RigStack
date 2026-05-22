@@ -12,7 +12,7 @@ const pageMeta: Record<string, { title: string; parent?: string }> = {
   '/databases': { title: 'Databases', parent: 'Database' },
   '/network': { title: 'Virtual Cloud Networks', parent: 'Networking' },
   '/loadbalancer': { title: 'Load Balancers', parent: 'Networking' },
-  '/images': { title: 'Images', parent: 'Storage' },
+  '/images': { title: 'Images', parent: 'Compute' },
   '/iam': { title: 'Users', parent: 'Identity & Security' },
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -46,6 +47,8 @@ func (e *Executor) Handle(cmd *pb.Command) {
 			err = e.createVPC(cmd.Payload)
 		case "delete_vpc":
 			err = e.deleteVPC(cmd.Payload)
+		case "download_image":
+			err = e.downloadImage(ctx, cmd.Payload)
 		case "create_vm":
 			err = e.createVM(ctx, cmd.Payload)
 		case "start_vm":
@@ -164,6 +167,26 @@ func (e *Executor) stopVM(ctx context.Context, payload string) error {
 	}
 	_ = e.report(ctx, cmd.VMID, "stopped", "")
 	return nil
+}
+
+func (e *Executor) downloadImage(ctx context.Context, payload string) error {
+	var cmd struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+	if err := json.Unmarshal([]byte(payload), &cmd); err != nil {
+		return fmt.Errorf("parse download_image payload: %w", err)
+	}
+	if !safeImageName.MatchString(cmd.Name) {
+		return fmt.Errorf("invalid image name: %q", cmd.Name)
+	}
+	target := filepath.Join(baseImageDir, cmd.Name+".qcow2")
+	e.logger.Info("downloading image", "name", cmd.Name, "target", target)
+	if out, err := exec.CommandContext(ctx, "wget", "-q", "--show-progress", "-O", target+".tmp", cmd.URL).CombinedOutput(); err != nil {
+		_ = exec.Command("rm", "-f", target+".tmp").Run()
+		return fmt.Errorf("download image %q: %w — %s", cmd.Name, err, out)
+	}
+	return exec.Command("mv", target+".tmp", target).Run()
 }
 
 func (e *Executor) deleteVM(ctx context.Context, payload string) error {

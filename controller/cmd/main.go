@@ -50,6 +50,7 @@ func main() {
 	nodeSvc := service.NewNodeService(nodeStore)
 	vpcSvc := service.NewVPCService(vpcStore, sched, disp)
 	instanceSvc := service.NewInstanceService(instanceStore, vpcStore, sched, disp)
+	imageSvc := service.NewImageService(sched, disp)
 
 	// gRPC server — roda em goroutine, usa o dispatcher para entregar comandos
 	grpcSrv := grpcserver.New(nodeStore, disp, logger)
@@ -62,7 +63,7 @@ func main() {
 	}()
 
 	// HTTP REST API
-	router := api.NewRouter(nodeSvc, vpcSvc, instanceSvc)
+	router := api.NewRouter(nodeSvc, vpcSvc, instanceSvc, imageSvc)
 	httpSrv := &http.Server{Addr: httpAddr, Handler: router}
 
 	go func() {

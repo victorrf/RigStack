@@ -9,15 +9,19 @@ import (
 )
 
 // NewRouter monta todas as rotas REST da API v1.
-func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *service.InstanceService) http.Handler {
+func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *service.InstanceService, images *service.ImageService) http.Handler {
 	mux := http.NewServeMux()
 
 	nh := handler.NewNodeHandler(nodes)
 	vh := handler.NewVPCHandler(vpcs)
 	ih := handler.NewInstanceHandler(instances)
+	imgh := handler.NewImageHandler(images)
 
 	mux.HandleFunc("GET /api/v1/nodes", nh.List)
 	mux.HandleFunc("DELETE /api/v1/nodes/{id}", nh.Delete)
+
+	mux.HandleFunc("GET /api/v1/images", imgh.List)
+	mux.HandleFunc("POST /api/v1/images/{id}/deploy", imgh.Deploy)
 
 	mux.HandleFunc("GET /api/v1/vpcs", vh.List)
 	mux.HandleFunc("POST /api/v1/vpcs", vh.Create)

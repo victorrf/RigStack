@@ -20,6 +20,7 @@ import { RealDashboard } from './pages/real/Dashboard'
 import { RealInstances } from './pages/real/Instances'
 import { RealNetwork } from './pages/real/Network'
 import { RealNodes } from './pages/real/Nodes'
+import { RealImages } from './pages/real/Images'
 
 export default function App() {
   return (
@@ -36,7 +37,7 @@ export default function App() {
           <Route path="/kubernetes" element={<ComingSoon feature="Kubernetes" />} />
           <Route path="/databases" element={<ComingSoon feature="Databases" />} />
           <Route path="/loadbalancer" element={<ComingSoon feature="Load Balancer" />} />
-          <Route path="/images" element={<ComingSoon feature="Images" />} />
+          <Route path="/images" element={<RealImages />} />
           <Route path="/iam" element={<ComingSoon feature="IAM" />} />
         </Route>
 
