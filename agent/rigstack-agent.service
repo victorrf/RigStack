@@ -1,0 +1,37 @@
+[Unit]
+Description=RigStack Agent
+Documentation=https://github.com/rigstack/rigstack
+After=network-online.target libvirtd.service
+Wants=network-online.target
+Requires=libvirtd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/rigstack-agent
+
+# Endereço gRPC do controller (obrigatório)
+Environment=CONTROLLER_ADDR=controller.example.com:9090
+
+# Identificação deste node
+Environment=NODE_NAME=node-01
+Environment=NODE_REGION=local-1
+
+# Endereço pelo qual o controller pode referenciar este node
+Environment=NODE_ADDR=192.168.1.10:9091
+
+# Socket do libvirtd
+Environment=LIBVIRT_SOCKET=/var/run/libvirt/libvirt-sock
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+# Permissões necessárias para: libvirt, iptables, ip netns, qemu-img
+User=root
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rigstack-agent
+
+[Install]
+WantedBy=multi-user.target

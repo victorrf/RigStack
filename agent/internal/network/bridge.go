@@ -1,18 +1,28 @@
 package network
 
-// Gerenciamento de bridges Linux para as VPCs.
-//
-// Cada VPC recebe uma bridge dedicada no node: rs-br-{vpcID}
-//
-// Operações:
-//   CreateBridge(vpcID, cidr) → ip link add rs-br-{id} type bridge
-//                               ip addr add {natgw_ip}/prefix dev rs-br-{id}
-//                               ip link set rs-br-{id} up
-//
-//   DeleteBridge(vpcID)       → ip link set rs-br-{id} down
-//                               ip link del rs-br-{id}
-//
-//   AttachInterface(vpcID, iface) → ip link set {iface} master rs-br-{id}
-//
-// A bridge é o ponto central da VPC no node:
-//   VMs → bridge → NAT GW (netns) → eth0 do node → internet
+import "fmt"
+
+func createBridge(vpcID, gatewayIP string, prefix int) error {
+	name := BridgeName(vpcID)
+	for _, cmd := range [][]string{
+		{"ip", "link", "add", name, "type", "bridge"},
+		{"ip", "link", "set", name, "up"},
+		{"ip", "addr", "add", fmt.Sprintf("%s/%d", gatewayIP, prefix), "dev", name},
+	} {
+		if err := run(cmd...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteBridge(vpcID string) error {
+	name := BridgeName(vpcID)
+	_ = run("ip", "link", "set", name, "down")
+	return run("ip", "link", "del", name)
+}
+
+// AttachToBridge liga uma interface de VM (vnet/tap gerada pelo libvirt) à bridge da VPC.
+func AttachToBridge(vpcID, iface string) error {
+	return run("ip", "link", "set", iface, "master", BridgeName(vpcID))
+}

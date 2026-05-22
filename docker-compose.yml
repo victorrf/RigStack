@@ -10,18 +10,35 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./controller/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rigstack"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   controller:
-    build: ./controller
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
     ports:
       - "8080:8080"   # REST API (frontend)
-      - "9090:9090"   # gRPC (agents)
+      - "9090:9090"   # gRPC (agents bare-metal)
     environment:
       DATABASE_URL: postgres://rigstack:rigstack@postgres:5432/rigstack
       GRPC_PORT: "9090"
       HTTP_PORT: "8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # O frontend em desenvolvimento roda fora do Docker (npm run dev / porta 5173).
+  # Em produção, servir os arquivos estáticos de Vite via nginx ou CDN.
+
+  # NOTA: O agent NÃO roda em Docker.
+  # Ele precisa de acesso direto ao kernel (KVM, libvirt, ip netns, iptables).
+  # Instale-o como serviço systemd em cada hypervisor bare-metal:
+  #   cd agent && sudo ./install.sh <CONTROLLER_IP>:9090
 
 volumes:
   postgres_data:

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package rigstack;
-option go_package = "github.com/rigstack/proto/networkpb";
+option go_package = "github.com/rigstack/proto/gen;pb";
 
 // Operações de rede enviadas do controller para o agent.
 

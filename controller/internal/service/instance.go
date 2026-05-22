@@ -1,10 +1,160 @@
 package service
 
-// InstanceService — lógica de negócio para VMs.
-//
-// Métodos planejados:
-//   Create(req)        → persiste no banco, aciona scheduler, manda pro agent
-//   Start(id)          → verifica estado atual, manda comando ao agent do node
-//   Stop(id)           → idem
-//   Delete(id)         → para a VM, libera recursos, remove do banco
-//   UpdateStatus(id, status) → chamado pelo grpcserver quando agent reporta mudança
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net"
+	"strings"
+
+	pb "github.com/rigstack/proto/gen"
+	"github.com/rigstack/controller/internal/dispatcher"
+	"github.com/rigstack/controller/internal/scheduler"
+	"github.com/rigstack/controller/internal/store/postgres"
+)
+
+type InstanceService struct {
+	store      *postgres.InstanceStore
+	vpcs       *postgres.VPCStore
+	scheduler  *scheduler.Scheduler
+	dispatcher *dispatcher.Dispatcher
+}
+
+func NewInstanceService(
+	store *postgres.InstanceStore,
+	vpcs *postgres.VPCStore,
+	sched *scheduler.Scheduler,
+	disp *dispatcher.Dispatcher,
+) *InstanceService {
+	return &InstanceService{store: store, vpcs: vpcs, scheduler: sched, dispatcher: disp}
+}
+
+type CreateInstanceRequest struct {
+	Name      string
+	VPCID     string
+	VCPUs     int
+	RAMMB     int
+	DiskGB    int
+	OSImage   string
+	SSHPubKey string
+}
+
+func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest) (*postgres.Instance, error) {
+	if req.Name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	if req.VCPUs < 1 {
+		return nil, fmt.Errorf("vcpus must be >= 1")
+	}
+	if req.RAMMB < 512 {
+		return nil, fmt.Errorf("ram_mb must be >= 512")
+	}
+	if req.VPCID == "" {
+		return nil, fmt.Errorf("vpc_id is required")
+	}
+
+	vpc, err := s.vpcs.Get(ctx, req.VPCID)
+	if err != nil {
+		return nil, fmt.Errorf("vpc not found: %w", err)
+	}
+
+	node, err := s.scheduler.PickNode(ctx, int64(req.RAMMB)*1024*1024)
+	if err != nil {
+		return nil, fmt.Errorf("pick node: %w", err)
+	}
+
+	ip, prefix, gw, err := allocateIP(ctx, s.store, vpc)
+	if err != nil {
+		return nil, fmt.Errorf("allocate ip: %w", err)
+	}
+
+	id, err := s.store.Create(ctx, &postgres.Instance{
+		Name:    req.Name,
+		NodeID:  node.ID,
+		VPCID:   req.VPCID,
+		VCPUs:   req.VCPUs,
+		RAMMB:   req.RAMMB,
+		DiskGB:  req.DiskGB,
+		OSImage: req.OSImage,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create instance: %w", err)
+	}
+
+	// Atualiza o IP alocado na instância recém-criada
+	_ = s.store.UpdateStatus(ctx, id, "pending", ip)
+
+	payload, _ := json.Marshal(map[string]any{
+		"vm_id":       id,
+		"name":        req.Name,
+		"vcpus":       req.VCPUs,
+		"ram_mb":      req.RAMMB,
+		"disk_gb":     req.DiskGB,
+		"os_image":    req.OSImage,
+		"bridge_name": bridgeName(req.VPCID),
+		"ip_address":  ip,
+		"prefix":      prefix,
+		"gateway":     gw,
+		"ssh_pubkey":  req.SSHPubKey,
+	})
+	s.dispatcher.Enqueue(node.ID, &pb.Command{Type: "create_vm", Payload: string(payload)})
+
+	return s.store.Get(ctx, id)
+}
+
+func (s *InstanceService) List(ctx context.Context) ([]postgres.Instance, error) {
+	return s.store.List(ctx)
+}
+
+func (s *InstanceService) Get(ctx context.Context, id string) (*postgres.Instance, error) {
+	return s.store.Get(ctx, id)
+}
+
+func (s *InstanceService) UpdateStatus(ctx context.Context, id, status string) error {
+	return s.store.UpdateStatus(ctx, id, status, "")
+}
+
+func (s *InstanceService) Delete(ctx context.Context, id string) error {
+	return s.store.Delete(ctx, id)
+}
+
+// allocateIP escolhe o próximo IP disponível na subnet da VPC.
+// Fase A: sequencial a partir de .11 (gateway = .1, .2-.10 reservados).
+func allocateIP(ctx context.Context, store *postgres.InstanceStore, vpc *postgres.VPC) (ip string, prefix int, gw string, err error) {
+	_, ipNet, err := net.ParseCIDR(vpc.CIDR)
+	if err != nil {
+		return "", 0, "", fmt.Errorf("parse cidr: %w", err)
+	}
+	ones, _ := ipNet.Mask.Size()
+	base := ipNet.IP.To4()
+	if base == nil {
+		return "", 0, "", fmt.Errorf("only IPv4 supported")
+	}
+
+	// Gateway = primeiro host da subnet (.1)
+	gw4 := make(net.IP, 4)
+	copy(gw4, base)
+	gw4[3]++
+	gw = gw4.String()
+
+	count, err := store.CountByVPC(ctx, vpc.ID)
+	if err != nil {
+		return "", 0, "", err
+	}
+
+	// VMs começam em .11 (count=0 → offset=1 → .11)
+	vm4 := make(net.IP, 4)
+	copy(vm4, base)
+	vm4[3] = byte(11 + count)
+
+	return vm4.String(), ones, gw, nil
+}
+
+// bridgeName replica a lógica do agent/internal/network para gerar o nome da bridge.
+func bridgeName(vpcID string) string {
+	clean := strings.ReplaceAll(vpcID, "-", "")
+	if len(clean) > 9 {
+		clean = clean[:9]
+	}
+	return "rs-br-" + clean
+}

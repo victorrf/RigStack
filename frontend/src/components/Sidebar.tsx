@@ -50,7 +50,12 @@ const navGroups = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  basePath?: string
+}
+
+export function Sidebar({ basePath = '' }: SidebarProps) {
+  const isDemo = basePath !== ''
   return (
     <aside className="w-56 min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-10" style={{ background: '#0f1523' }}>
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/5">
@@ -71,7 +76,7 @@ export function Sidebar() {
             {group.items.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
-                to={to}
+                to={basePath + to}
                 end={to === '/'}
                 className={({ isActive }) =>
                   `flex items-center gap-2.5 px-3 py-1.5 rounded text-xs transition-colors my-0.5 ${
@@ -91,11 +96,11 @@ export function Sidebar() {
 
       <div className="px-3 py-3 border-t border-white/5">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            M
+          <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {isDemo ? 'U' : 'M'}
           </div>
           <div className="min-w-0">
-            <p className="text-slate-300 text-xs font-medium truncate">Missael</p>
+            <p className="text-slate-300 text-xs font-medium truncate">{isDemo ? 'User' : 'Missael'}</p>
             <p className="text-slate-600 text-[10px] truncate">Administrator</p>
           </div>
         </div>

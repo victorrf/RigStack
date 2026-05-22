@@ -1,6 +1,6 @@
 syntax = "proto3";
 package rigstack;
-option go_package = "github.com/rigstack/proto/nodepb";
+option go_package = "github.com/rigstack/proto/gen;pb";
 
 // Registro e heartbeat de nodes (agents → controller).
 

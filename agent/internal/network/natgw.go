@@ -1,23 +1,30 @@
 package network
 
-// NAT Gateway — implementado como Linux network namespace.
+import "fmt"
+
+// createNATGW habilita o NAT Gateway da VPC neste node.
 //
-// Nomenclatura:
-//   netns:  rs-natgw-{vpcID}
-//   veth par: rs-gw0-{vpcID}  (dentro da netns)
-//             rs-gw1-{vpcID}  (na bridge da VPC)
+// Fase A: ip_forward no host + netns reservado + iptables MASQUERADE.
+// A bridge da VPC carrega o IP do gateway; o NAT ocorre no namespace do host.
 //
-// Sequência de criação:
-//   1. ip netns add rs-natgw-{vpcID}
-//   2. ip link add rs-gw0-{vpcID} type veth peer name rs-gw1-{vpcID}
-//   3. ip link set rs-gw0-{vpcID} netns rs-natgw-{vpcID}
-//   4. ip link set rs-gw1-{vpcID} master rs-br-{vpcID}   (entra na bridge da VPC)
-//   5. ip -n rs-natgw-{vpcID} addr add {natgw_ip}/prefix dev rs-gw0-{vpcID}
-//   6. ip -n rs-natgw-{vpcID} link set rs-gw0-{vpcID} up
-//   7. ip -n rs-natgw-{vpcID} route add default via {ip da eth0 do node}
-//   8. ip netns exec rs-natgw-{vpcID} iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-//
-// Resultado: VMs com default gateway = natgw_ip saem para internet via MASQUERADE.
-//
-// Fase A: NAT GW sempre no mesmo node que a VPC foi criada.
-// Fase B: NAT GW pode ser movido para outro node (com downtime breve).
+// Fase B (futuro): veth pairs dentro do netns para isolamento completo,
+// com roteamento separado por VPC.
+func createNATGW(vpcID, cidr, uplinkIface string) error {
+	if err := run("sysctl", "-w", "net.ipv4.ip_forward=1"); err != nil {
+		return fmt.Errorf("enable ip_forward: %w", err)
+	}
+	if err := run("ip", "netns", "add", netnsName(vpcID)); err != nil {
+		return fmt.Errorf("create netns: %w", err)
+	}
+	if err := addMasquerade(cidr, uplinkIface); err != nil {
+		_ = run("ip", "netns", "del", netnsName(vpcID))
+		return fmt.Errorf("add masquerade: %w", err)
+	}
+	return nil
+}
+
+func deleteNATGW(vpcID, cidr, uplinkIface string) error {
+	_ = deleteMasquerade(cidr, uplinkIface)
+	_ = run("ip", "netns", "del", netnsName(vpcID))
+	return nil
+}
