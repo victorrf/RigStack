@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	api "github.com/rigstack/controller/internal/api"
 	"github.com/rigstack/controller/internal/dispatcher"
@@ -66,7 +67,9 @@ func main() {
 
 	go func() {
 		<-ctx.Done()
-		_ = httpSrv.Shutdown(context.Background())
+		shutCtx, shutCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutCancel()
+		_ = httpSrv.Shutdown(shutCtx)
 	}()
 
 	logger.Info("HTTP server starting", "addr", httpAddr)

@@ -82,7 +82,9 @@ func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest)
 	}
 
 	// Atualiza o IP alocado na instância recém-criada
-	_ = s.store.UpdateStatus(ctx, id, "pending", ip)
+	if err := s.store.UpdateStatus(ctx, id, "pending", ip); err != nil {
+		return nil, fmt.Errorf("update instance ip: %w", err)
+	}
 
 	payload, _ := json.Marshal(map[string]any{
 		"vm_id":       id,

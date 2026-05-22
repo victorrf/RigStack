@@ -43,10 +43,15 @@ func (m *Manager) CreateVPC(vpcID, cidr string) error {
 }
 
 // DeleteVPC remove bridge + NAT GW de uma VPC.
-func (m *Manager) DeleteVPC(vpcID, cidr string) {
-	_ = deleteNATGW(vpcID, cidr, m.uplink)
-	_ = deleteBridge(vpcID)
+func (m *Manager) DeleteVPC(vpcID, cidr string) error {
+	if err := deleteNATGW(vpcID, cidr, m.uplink); err != nil {
+		m.logger.Warn("delete natgw failed", "vpc_id", vpcID, "err", err)
+	}
+	if err := deleteBridge(vpcID); err != nil {
+		return err
+	}
 	m.logger.Info("vpc network removed", "vpc_id", vpcID)
+	return nil
 }
 
 // BridgeName retorna o nome da bridge Linux para uma VPC.

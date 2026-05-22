@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"regexp"
 
 	pb "github.com/rigstack/proto/gen"
 	"github.com/rigstack/agent/internal/libvirt"
@@ -14,6 +15,8 @@ import (
 )
 
 const baseImageDir = "/var/lib/rigstack/base"
+
+var safeImageName = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 // StatusReporter é a função que o executor chama para informar o controller
 // sobre mudanças de estado de uma VM.
@@ -81,8 +84,7 @@ func (e *Executor) deleteVPC(payload string) error {
 		return nil
 	}
 	e.logger.Info("deleting vpc network", "vpc_id", cmd.VPCID)
-	e.net.DeleteVPC(cmd.VPCID, cmd.CIDR)
-	return nil
+	return e.net.DeleteVPC(cmd.VPCID, cmd.CIDR)
 }
 
 func (e *Executor) createVM(ctx context.Context, payload string) error {
@@ -95,6 +97,9 @@ func (e *Executor) createVM(ctx context.Context, payload string) error {
 
 	_ = e.report(ctx, cmd.VMID, "pending", "")
 
+	if !safeImageName.MatchString(cmd.OSImage) {
+		return fmt.Errorf("invalid os_image name: %q", cmd.OSImage)
+	}
 	baseImage := filepath.Join(baseImageDir, cmd.OSImage+".qcow2")
 
 	mac, err := libvirt.RandomMAC()

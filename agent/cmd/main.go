@@ -158,7 +158,7 @@ func collectStats(ctx context.Context, lv *libvirt.Manager, logger *slog.Logger)
 	}
 
 	return controller.HeartbeatStats{
-		CPUFreePct: ramFreePct, // fase A: aproximação; fase B: ler /proc/stat
+		CPUFreePct: ramFreePct, // TODO fase B: ler /proc/stat; por ora usa RAM% como proxy
 		RAMFree:    int64(stats.RAMFree),
 		DiskFree:   0, // fase B: ler via syscall.Statfs
 		VMCount:    int32(stats.VMRunning),
