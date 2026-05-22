@@ -6,29 +6,29 @@
 
 ## Quick Start
 
-**1. Suba o controller (qualquer máquina com Docker):**
+**1. Start the controller (any machine with Docker):**
 ```bash
 git clone https://github.com/missa-thecreator/rigstack.git
 cd rigstack
 docker compose up -d
 ```
 
-**2. Adicione um node (cada hypervisor bare-metal, sem Go necessário):**
+**2. Add a node (each bare-metal hypervisor — no Go required):**
 ```bash
-# Pré-requisitos no node
+# Prerequisites on the node
 sudo apt install -y libvirt-daemon-system qemu-kvm genisoimage qemu-utils
 sudo systemctl enable --now libvirtd
 
-# Instalar o agent — um único comando
-curl -fsSL http://IP-DO-CONTROLLER:8080/agent/install.sh | sudo sh -
+# Bootstrap the agent — single command
+curl -fsSL http://CONTROLLER_IP:8080/agent/install.sh | sudo sh -
 ```
 
-Com nome e região personalizados:
+With a custom name and region:
 ```bash
-curl -fsSL "http://IP-DO-CONTROLLER:8080/agent/install.sh?name=node-01&region=home-1" | sudo sh -
+curl -fsSL "http://CONTROLLER_IP:8080/agent/install.sh?name=node-01&region=home-1" | sudo sh -
 ```
 
-O controller serve o binário do agent automaticamente — não é necessário Go, código-fonte ou cópia manual de arquivos no node.
+The controller serves the agent binary automatically — no Go, source code, or manual file copying needed on the node.
 
 ---
 
@@ -60,27 +60,27 @@ RigStack follows a **controller + agent** model similar to Kubernetes:
     ▼             ▼
 ┌────────┐   ┌────────┐
 │ Agent  │   │ Agent  │   ← bare-metal / systemd
-│ node-1 │   │ node-2 │     cada servidor físico
+│ node-1 │   │ node-2 │     one per physical server
 └────────┘   └────────┘
  libvirt      libvirt
  KVM/QEMU    KVM/QEMU
 ```
 
-**Controller** — roda em Docker, gerencia o estado global:
-- REST API consumida pelo frontend (`/api/v1/*`)
-- Servidor gRPC que se comunica com os agents
-- Scheduler escolhe qual node executa cada VM (least-loaded por RAM)
-- Dispatcher enfileira comandos e os entrega no próximo heartbeat do agent
+**Controller** — runs in Docker, manages global state:
+- REST API consumed by the frontend (`/api/v1/*`)
+- gRPC server that communicates with agents
+- Scheduler picks which node runs each VM (least-loaded by free RAM)
+- Dispatcher queues commands and delivers them on the next agent heartbeat
 
-**Agent** — roda como `systemd` service em cada hypervisor bare-metal:
-- Registra o node no controller via gRPC
-- Envia heartbeat a cada 10s com stats de CPU/RAM/disco
-- Recebe comandos (`create_vm`, `create_vpc`, etc.) e os executa
-- Cria VMs via libvirt/KVM, configura redes via Linux bridges + iptables
-- Reporta status de volta ao controller (`running`, `stopped`, `error`)
+**Agent** — runs as a `systemd` service on each bare-metal hypervisor:
+- Registers the node with the controller via gRPC
+- Sends a heartbeat every 10s with CPU/RAM/disk stats
+- Receives commands (`create_vm`, `create_vpc`, etc.) and executes them
+- Creates VMs via libvirt/KVM, configures networking via Linux bridges + iptables
+- Reports status back to the controller (`running`, `stopped`, `error`)
 
-**Por que o agent não roda em Docker?**  
-Ele precisa de acesso direto ao kernel: `/dev/kvm`, socket do libvirtd, `ip netns`, `iptables` e operações de filesystem em `/var/lib/rigstack/`. Rodar em Docker com `--privileged` remove todo o isolamento sem ganho real — `systemd` é o lugar certo.
+**Why doesn't the agent run in Docker?**  
+It needs direct kernel access: `/dev/kvm`, the libvirtd socket, `ip netns`, `iptables`, and filesystem operations under `/var/lib/rigstack/`. Running it in Docker with `--privileged` removes all isolation without any real benefit — systemd is the right place for it.
 
 ---
 
@@ -88,17 +88,17 @@ Ele precisa de acesso direto ao kernel: `/dev/kvm`, socket do libvirtd, `ip netn
 
 | Feature | Status | Powered By |
 |---|---|---|
-| Instâncias (VMs) | Em desenvolvimento | libvirt / QEMU-KVM |
-| VPC / Rede virtual | Em desenvolvimento | Linux bridge + iptables NAT |
-| NAT Gateway por VPC | Em desenvolvimento | Linux network namespace |
-| Dashboard UI | Funcional (live demo) | React + Tailwind |
-| REST API | Funcional | Go `net/http` |
-| Agent gRPC | Funcional | gRPC bidirecional |
-| Object Storage | Planejado | MinIO |
-| Kubernetes gerenciado | Planejado | k3s |
-| Databases gerenciados | Planejado | PostgreSQL, MySQL, Redis |
-| Load Balancer | Planejado | HAProxy / Nginx |
-| IAM | Planejado | JWT |
+| Virtual Machines | In development | libvirt / QEMU-KVM |
+| VPC / Virtual Network | In development | Linux bridge + iptables NAT |
+| NAT Gateway per VPC | In development | Linux network namespace |
+| Dashboard UI | Working | React + Tailwind |
+| REST API | Working | Go `net/http` |
+| Agent gRPC | Working | Bidirectional gRPC stream |
+| Object Storage | Planned | MinIO |
+| Managed Kubernetes | Planned | k3s |
+| Managed Databases | Planned | PostgreSQL, MySQL, Redis |
+| Load Balancer | Planned | HAProxy / Nginx |
+| IAM | Planned | JWT |
 
 ---
 
@@ -109,27 +109,27 @@ Ele precisa de acesso direto ao kernel: `/dev/kvm`, socket do libvirtd, `ip netn
 - React Router + Lucide React
 
 **Backend**
-- Go 1.23 — módulos: `controller`, `agent`, `proto`
-- gRPC (Protocol Buffers) — comunicação controller ↔ agent
-- PostgreSQL — estado do controller (nodes, VPCs, instances)
-- libvirt / QEMU-KVM — gerenciamento de VMs nos nodes
-- cloud-init — provisionamento inicial das VMs (SSH key, IP estático)
-- qcow2 + backing files — discos das VMs (copy-on-write)
-- Linux bridges + iptables — networking das VPCs
+- Go 1.23 — modules: `controller`, `agent`, `proto`
+- gRPC (Protocol Buffers) — controller ↔ agent communication
+- PostgreSQL — controller state (nodes, VPCs, instances)
+- libvirt / QEMU-KVM — VM management on nodes
+- cloud-init — initial VM provisioning (SSH key, static IP)
+- qcow2 + backing files — VM disks (copy-on-write)
+- Linux bridges + iptables — VPC networking
 
 ---
 
-## Requisitos
+## Requirements
 
-### Controller (servidor de controle)
+### Controller
 - Docker + Docker Compose
-- 1 CPU, 512 MB RAM mínimo
-- Acesso de rede para os hypervisores na porta 9090 (gRPC)
+- 1 CPU, 512 MB RAM minimum
+- Network access to hypervisors on port 9090 (gRPC)
 
-### Agent (cada hypervisor)
-- Qualquer distro Linux com libvirt/KVM — testado em Ubuntu 22.04+, Debian 12+
-- KVM habilitado: `egrep -c '(vmx|svm)' /proc/cpuinfo` deve retornar > 0
-- Mínimo 8 GB RAM, 4 CPUs, 100 GB disco
+### Agent (each hypervisor)
+- Any Linux distro with libvirt/KVM — tested on Ubuntu 22.04+, Debian 12+
+- KVM enabled: `egrep -c '(vmx|svm)' /proc/cpuinfo` must return > 0
+- Minimum: 8 GB RAM, 4 CPUs, 100 GB disk
 
 **Ubuntu 22.04 / 24.04:**
 ```bash
@@ -141,83 +141,84 @@ apt install libvirt-daemon-system qemu-kvm genisoimage qemu-utils
 apt install libvirt-daemon-system qemu-kvm genisoimage qemu-utils cloud-utils
 ```
 
-> **Testando em VM (nested virtualization)?**  
-> É possível rodar o agent dentro de uma VM — útil para testes antes de usar hardware real.  
-> Você precisa habilitar nested virtualization no seu hypervisor:
+> **Testing with nested virtualization?**  
+> You can run the agent inside a VM — useful for testing before using real hardware.  
+> Enable nested virtualization on your hypervisor:
 > - **VMware Workstation/Player** → Settings → Processors → *Virtualize Intel VT-x/EPT*
-> - **VirtualBox** → `VBoxManage modifyvm "nome-vm" --nested-hw-virt on`
-> - **Hyper-V** → `Set-VMProcessor -VMName "nome-vm" -ExposeVirtualizationExtensions $true`
+> - **VirtualBox** → `VBoxManage modifyvm "vm-name" --nested-hw-virt on`
+> - **Hyper-V** → `Set-VMProcessor -VMName "vm-name" -ExposeVirtualizationExtensions $true`
+> - **Proxmox** → set CPU type to `host` on the VM
 >
-> Specs mínimas para a VM de teste: 4 vCPUs, 4 GB RAM, 40 GB disco.  
-> Verifique antes de instalar: `kvm-ok` (pacote `cpu-checker`).
+> Minimum specs for the test VM: 4 vCPUs, 4 GB RAM, 40 GB disk.  
+> Verify before installing: `kvm-ok` (from the `cpu-checker` package).
 
 ---
 
-## Instalação
+## Installation
 
-### 1. Clonar o repositório
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/missa-thecreator/rigstack.git
 cd rigstack
 ```
 
-### 2. Subir o Controller + Banco de dados
+### 2. Start the Controller
 
 ```bash
 docker compose up -d
 ```
 
-O controller sobe em:
-- `http://localhost:8080` — REST API
-- `localhost:9090` — gRPC (para os agents)
+The controller starts on:
+- `http://localhost:8080` — REST API + frontend
+- `localhost:9090` — gRPC (for agents)
 
-Verificar saúde:
+Verify:
 ```bash
 curl http://localhost:8080/api/v1/health
 # {"status":"ok"}
 ```
 
-### 3. Instalar o Agent nos hypervisores
+### 3. Install the Agent on hypervisors
 
-Não é necessário Go nem código-fonte no node. O controller serve o binário e o script de instalação automaticamente.
+No Go or source code needed on the node. The controller serves the binary and install script automatically.
 
-**a) Pré-requisitos no node**
+**a) Prerequisites on the node**
 ```bash
 sudo apt update
 sudo apt install -y libvirt-daemon-system qemu-kvm genisoimage qemu-utils
 sudo systemctl enable --now libvirtd
 ```
 
-**b) Instalar com um único comando**
+**b) Install with a single command**
 
-Substitua `192.168.1.100` pelo IP da sua máquina onde o controller está rodando:
+Replace `192.168.1.100` with your controller's IP:
 
 ```bash
 curl -fsSL http://192.168.1.100:8080/agent/install.sh | sudo sh -
 ```
 
-Com nome e região personalizados:
+With a custom name and region:
 ```bash
 curl -fsSL "http://192.168.1.100:8080/agent/install.sh?name=node-01&region=home-1" | sudo sh -
 ```
 
-O script baixa o binário compilado do próprio controller, cria o serviço systemd e inicia o agent automaticamente.
+The script downloads the compiled binary from the controller, creates the systemd service, and starts the agent automatically.
 
-**c) Verificar**
+**c) Verify**
 ```bash
 systemctl status rigstack-agent
 journalctl -u rigstack-agent -f
 ```
 
-O node deve aparecer em:
+The node should appear at:
 ```bash
 curl http://192.168.1.100:8080/api/v1/nodes
 ```
 
-### 4. Preparar imagens base
+### 4. Prepare base images
 
-Baixe imagens cloud e coloque em `/var/lib/rigstack/base/` em cada hypervisor:
+Download cloud images and place them in `/var/lib/rigstack/base/` on each hypervisor:
 
 ```bash
 sudo mkdir -p /var/lib/rigstack/base
@@ -235,48 +236,48 @@ wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericclou
   -O /var/lib/rigstack/base/debian-12.qcow2
 ```
 
-### 5. Frontend em desenvolvimento
+### 5. Frontend (development)
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# Acesse http://localhost:5173
+# Open http://localhost:5173
 ```
 
 ---
 
-## API REST
+## REST API
 
 Base URL: `http://localhost:8080`
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/v1/health` | Healthcheck |
-| GET | `/api/v1/nodes` | Lista nodes registrados |
-| GET | `/api/v1/vpcs` | Lista VPCs |
-| POST | `/api/v1/vpcs` | Cria VPC |
-| DELETE | `/api/v1/vpcs/{id}` | Remove VPC |
-| GET | `/api/v1/instances` | Lista instâncias |
-| POST | `/api/v1/instances` | Cria instância (VM) |
-| PUT | `/api/v1/instances/{id}/start` | Inicia instância |
-| PUT | `/api/v1/instances/{id}/stop` | Para instância |
-| DELETE | `/api/v1/instances/{id}` | Remove instância |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/health` | Health check |
+| GET | `/api/v1/nodes` | List registered nodes |
+| GET | `/api/v1/vpcs` | List VPCs |
+| POST | `/api/v1/vpcs` | Create VPC |
+| DELETE | `/api/v1/vpcs/{id}` | Delete VPC |
+| GET | `/api/v1/instances` | List instances |
+| POST | `/api/v1/instances` | Create instance (VM) |
+| PUT | `/api/v1/instances/{id}/start` | Start instance |
+| PUT | `/api/v1/instances/{id}/stop` | Stop instance |
+| DELETE | `/api/v1/instances/{id}` | Delete instance |
 
-**Exemplo — criar VPC:**
+**Example — create VPC:**
 ```bash
 curl -X POST http://localhost:8080/api/v1/vpcs \
   -H "Content-Type: application/json" \
-  -d '{"name": "minha-vpc", "cidr": "10.0.1.0/24"}'
+  -d '{"name": "my-vpc", "cidr": "10.0.1.0/24"}'
 ```
 
-**Exemplo — criar instância:**
+**Example — create instance:**
 ```bash
 curl -X POST http://localhost:8080/api/v1/instances \
   -H "Content-Type: application/json" \
   -d '{
     "name": "web-01",
-    "vpc_id": "<ID_DA_VPC>",
+    "vpc_id": "<VPC_ID>",
     "vcpus": 2,
     "ram_mb": 2048,
     "disk_gb": 20,
@@ -287,32 +288,31 @@ curl -X POST http://localhost:8080/api/v1/instances \
 
 ---
 
-## Estrutura do Projeto
+## Project Structure
 
 ```
 RigStack/
 ├── frontend/              # React + Vite (dashboard)
-├── controller/            # API REST + gRPC server (Go)
+├── controller/            # REST API + gRPC server (Go)
 │   ├── cmd/               # main.go
 │   ├── internal/
-│   │   ├── api/           # handlers HTTP + router + middleware
-│   │   ├── dispatcher/    # fila de comandos controller → agent
-│   │   ├── grpcserver/    # servidor gRPC (heartbeat + comandos)
-│   │   ├── scheduler/     # seleção de node (least-loaded)
-│   │   ├── service/       # lógica de negócio (VPC, instância, node)
-│   │   └── store/         # acesso ao PostgreSQL
+│   │   ├── api/           # HTTP handlers + router + middleware
+│   │   ├── dispatcher/    # command queue: controller → agent
+│   │   ├── grpcserver/    # gRPC server (heartbeat + commands)
+│   │   ├── scheduler/     # node selection (least-loaded)
+│   │   ├── service/       # business logic (VPC, instance, node)
+│   │   └── store/         # PostgreSQL access
 │   ├── migrations/        # SQL migrations
 │   └── Dockerfile
-├── agent/                 # Agent (Go) — roda bare-metal
+├── agent/                 # Agent (Go) — runs bare-metal
 │   ├── cmd/               # main.go
 │   ├── internal/
-│   │   ├── controller/    # cliente gRPC para o controller
-│   │   ├── executor/      # executa comandos recebidos
-│   │   ├── libvirt/       # gerencia VMs via libvirt/KVM
-│   │   ├── network/       # bridge Linux + NAT Gateway (iptables)
-│   │   └── storage/       # provisionamento de discos qcow2
-│   ├── rigstack-agent.service  # systemd unit
-│   └── install.sh         # script de instalação
+│   │   ├── controller/    # gRPC client for the controller
+│   │   ├── executor/      # executes received commands
+│   │   ├── libvirt/       # VM management via libvirt/KVM
+│   │   ├── network/       # Linux bridge + NAT Gateway (iptables)
+│   │   └── storage/       # qcow2 disk provisioning
+│   └── rigstack-agent.service  # systemd unit
 ├── proto/                 # Protobuf definitions (gRPC)
 ├── docker-compose.yml
 ├── Makefile
@@ -321,23 +321,23 @@ RigStack/
 
 ---
 
-## Desenvolvimento
+## Development
 
 ```bash
-# Compilar tudo
+# Build everything
 make build
 
-# Gerar código protobuf (requer protoc)
+# Generate protobuf code (requires protoc)
 make proto
 
-# Subir banco para desenvolvimento
+# Start only the database
 docker compose up postgres -d
 
-# Rodar controller local
+# Run controller locally
 DATABASE_URL=postgres://rigstack:rigstack@localhost:5432/rigstack \
   go run ./controller/cmd/...
 
-# Rodar agent local (sem libvirt — modo de teste)
+# Run agent locally (no libvirt — test mode)
 CONTROLLER_ADDR=localhost:9090 \
 LIBVIRT_SOCKET="" \
   go run ./agent/cmd/...
@@ -347,37 +347,37 @@ LIBVIRT_SOCKET="" \
 
 ## Roadmap
 
-- [x] Dashboard UI (live demo estilo Oracle Cloud)
-- [x] REST API (Go) — nodes, VPCs, instâncias
-- [x] gRPC controller ↔ agent (heartbeat bidirecional + comandos)
-- [x] Provisionamento de VMs (libvirt/KVM + cloud-init)
-- [x] Networking de VPCs (bridge Linux + NAT Gateway + iptables)
-- [x] Scheduler least-loaded (escolha automática de node)
-- [x] Dispatcher de comandos (fila por node, entregue no heartbeat)
-- [ ] Integração frontend com API real (substituir mock data)
-- [ ] Security groups (regras iptables por VM)
-- [ ] Migração de VMs entre nodes (rsync + qemu-img)
+- [x] Dashboard UI (live demo + connected to real API)
+- [x] REST API (Go) — nodes, VPCs, instances
+- [x] gRPC controller ↔ agent (bidirectional heartbeat + commands)
+- [x] VM provisioning (libvirt/KVM + cloud-init)
+- [x] VPC networking (Linux bridge + NAT Gateway + iptables)
+- [x] Least-loaded scheduler (automatic node selection)
+- [x] Command dispatcher (per-node queue, delivered on heartbeat)
+- [x] Agent bootstrap via curl (k3s-style install)
+- [ ] Security groups (per-VM iptables rules)
+- [ ] VM migration between nodes (rsync + qemu-img)
 - [ ] Object Storage (MinIO)
-- [ ] IAM com JWT
-- [ ] Kubernetes gerenciado (k3s)
+- [ ] IAM with JWT
+- [ ] Managed Kubernetes (k3s)
 - [ ] CLI (`rigstack`)
 
 ---
 
-## Contribuindo
+## Contributing
 
-1. Fork o repositório
-2. Crie uma branch: `git checkout -b feature/minha-feature`
-3. Commit: `git commit -m 'feat: adicionar minha feature'`
-4. Push: `git push origin feature/minha-feature`
-5. Abra um Pull Request
-
----
-
-## Licença
-
-MIT — veja o arquivo [LICENSE](LICENSE).
+1. Fork the repository
+2. Create a branch: `git checkout -b feature/my-feature`
+3. Commit: `git commit -m 'feat: add my feature'`
+4. Push: `git push origin feature/my-feature`
+5. Open a Pull Request
 
 ---
 
-<p align="center">Feito para a comunidade homelab e self-hosting</p>
+## License
+
+MIT — see the [LICENSE](LICENSE) file.
+
+---
+
+<p align="center">Built for the homelab and self-hosting community</p>
