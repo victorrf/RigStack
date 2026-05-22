@@ -8,7 +8,7 @@
 
 **1. Suba o controller (qualquer máquina com Docker):**
 ```bash
-git clone https://github.com/seu-usuario/rigstack.git
+git clone https://github.com/missa-thecreator/rigstack.git
 cd rigstack
 docker compose up -d
 ```
