@@ -1,0 +1,34 @@
+syntax = "proto3";
+package rigstack;
+option go_package = "github.com/rigstack/proto/vmpb";
+
+// Operações de VM enviadas do controller para o agent.
+
+message CreateVMRequest {
+  string vm_id      = 1;
+  string name       = 2;
+  int32  vcpus      = 3;
+  int32  ram_mb     = 4;
+  int32  disk_gb    = 5;
+  string os_image   = 6; // nome da imagem base (ex: "ubuntu-24.04")
+  string vpc_id     = 7;
+  string subnet_id  = 8;
+  string ip_address = 9; // IP já alocado pelo controller
+  string ssh_pubkey = 10; // chave pública para cloud-init
+}
+
+message VMRequest {
+  string vm_id = 1;
+}
+
+message VMResponse {
+  bool   ok    = 1;
+  string error = 2;
+}
+
+service VMService {
+  rpc CreateVM(CreateVMRequest) returns (VMResponse);
+  rpc StartVM(VMRequest)        returns (VMResponse);
+  rpc StopVM(VMRequest)         returns (VMResponse);
+  rpc DeleteVM(VMRequest)       returns (VMResponse);
+}

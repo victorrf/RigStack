@@ -1,0 +1,53 @@
+syntax = "proto3";
+package rigstack;
+option go_package = "github.com/rigstack/proto/nodepb";
+
+// Registro e heartbeat de nodes (agents → controller).
+
+message NodeInfo {
+  string name     = 1; // nome do node (ex: "region-br-1")
+  string region   = 2; // identificador de região (ex: "br-sao-paulo")
+  string address  = 3; // IP:porta onde o agent pode ser contactado
+  int32  cpu_cores = 4;
+  int64  ram_bytes = 5;
+  int64  disk_bytes = 6;
+}
+
+message NodeID {
+  string id = 1;
+}
+
+message HeartbeatRequest {
+  string node_id   = 1;
+  int32  cpu_free  = 2; // % disponível
+  int64  ram_free  = 3; // bytes disponíveis
+  int64  disk_free = 4; // bytes disponíveis
+  int32  vm_count  = 5; // VMs rodando neste node
+}
+
+message HeartbeatResponse {
+  // Controller pode enviar comandos aqui.
+  // Fase A: vazio. Fase B: lista de comandos pendentes.
+  repeated Command commands = 1;
+}
+
+message Command {
+  string type    = 1; // "create_vm" | "stop_vm" | "delete_vm" | "create_vpc" | etc.
+  string payload = 2; // JSON com os parâmetros do comando
+}
+
+service NodeService {
+  rpc RegisterNode(NodeInfo)                          returns (NodeID);
+  rpc Heartbeat(stream HeartbeatRequest)              returns (stream HeartbeatResponse);
+  rpc ReportVMStatus(VMStatusUpdate)                  returns (Ack);
+}
+
+message VMStatusUpdate {
+  string vm_id  = 1;
+  string status = 2; // "running" | "stopped" | "error"
+  string ip     = 3; // IP atribuído (após boot)
+}
+
+message Ack {
+  bool ok = 1;
+}

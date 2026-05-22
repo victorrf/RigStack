@@ -1,0 +1,29 @@
+syntax = "proto3";
+package rigstack;
+option go_package = "github.com/rigstack/proto/networkpb";
+
+// Operações de rede enviadas do controller para o agent.
+
+message CreateVPCRequest {
+  string vpc_id     = 1;
+  string cidr       = 2; // ex: "10.0.0.0/16"
+  string natgw_ip   = 3; // IP do NAT GW dentro da VPC (ex: "10.0.0.1")
+  string bridge_name = 4; // ex: "rs-br-abc123"
+  string netns_name  = 5; // ex: "rs-natgw-abc123"
+}
+
+message DeleteVPCRequest {
+  string vpc_id      = 1;
+  string bridge_name = 2;
+  string netns_name  = 3;
+}
+
+message NetworkResponse {
+  bool   ok    = 1;
+  string error = 2;
+}
+
+service NetworkService {
+  rpc CreateVPC(CreateVPCRequest) returns (NetworkResponse);
+  rpc DeleteVPC(DeleteVPCRequest) returns (NetworkResponse);
+}

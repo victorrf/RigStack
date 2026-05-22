@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rigstack
+      POSTGRES_USER: rigstack
+      POSTGRES_PASSWORD: rigstack
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./controller/migrations:/docker-entrypoint-initdb.d
+
+  controller:
+    build: ./controller
+    ports:
+      - "8080:8080"   # REST API (frontend)
+      - "9090:9090"   # gRPC (agents)
+    environment:
+      DATABASE_URL: postgres://rigstack:rigstack@postgres:5432/rigstack
+      GRPC_PORT: "9090"
+      HTTP_PORT: "8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
