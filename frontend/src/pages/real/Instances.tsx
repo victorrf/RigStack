@@ -34,7 +34,11 @@ export function RealInstances() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 15000)
+    return () => clearInterval(timer)
+  }, [])
 
   const filtered = instances.filter(i => {
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase())
