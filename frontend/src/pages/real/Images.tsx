@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HardDrive, Download, RefreshCw, CheckCircle2, Loader2 } from 'lucide-react'
+import { HardDrive, Download, CheckCircle2, Loader2 } from 'lucide-react'
 import { api, type ApiImage } from '../../api/client'
 
 const OS_COLORS: Record<string, string> = {
