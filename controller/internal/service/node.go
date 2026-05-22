@@ -17,3 +17,7 @@ func NewNodeService(store *postgres.NodeStore) *NodeService {
 func (s *NodeService) List(ctx context.Context) ([]postgres.Node, error) {
 	return s.store.List(ctx)
 }
+
+func (s *NodeService) Delete(ctx context.Context, id string) error {
+	return s.store.Delete(ctx, id)
+}

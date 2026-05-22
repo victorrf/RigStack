@@ -57,6 +57,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   nodes: {
     list: () => req<ApiNode[]>('/api/v1/nodes'),
+    delete: (id: string) => req<void>(`/api/v1/nodes/${id}`, { method: 'DELETE' }),
   },
 
   vpcs: {

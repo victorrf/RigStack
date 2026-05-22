@@ -100,6 +100,13 @@ export interface Activity {
   time: string
 }
 
+export interface BucketObject {
+  key: string
+  size: string
+  lastModified: string
+  type: 'file' | 'folder'
+}
+
 export interface ContainerTag {
   tag: string
   size: string

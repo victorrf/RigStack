@@ -99,6 +99,11 @@ func (s *NodeStore) List(ctx context.Context) ([]Node, error) {
 	return nodes, rows.Err()
 }
 
+func (s *NodeStore) Delete(ctx context.Context, id string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM nodes WHERE id = $1`, id)
+	return err
+}
+
 func (s *NodeStore) GetHealthy(ctx context.Context) ([]Node, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT id, name, region, address, status,

@@ -17,6 +17,7 @@ func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *
 	ih := handler.NewInstanceHandler(instances)
 
 	mux.HandleFunc("GET /api/v1/nodes", nh.List)
+	mux.HandleFunc("DELETE /api/v1/nodes/{id}", nh.Delete)
 
 	mux.HandleFunc("GET /api/v1/vpcs", vh.List)
 	mux.HandleFunc("POST /api/v1/vpcs", vh.Create)

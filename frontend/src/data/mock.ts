@@ -1,5 +1,5 @@
 import type {
-  Instance, Bucket, Container, K8sCluster,
+  Instance, Bucket, BucketObject, Container, K8sCluster,
   Database, LoadBalancer, NetworkVPC, Image, IAMUser, Activity, ContainerRepo
 } from '../types'
 
@@ -17,6 +17,39 @@ export const buckets: Bucket[] = [
   { id: '2', name: 'media-assets', size: '72 GB', objects: 8430, region: 'local-1', access: 'public', createdAt: '2026-03-20' },
   { id: '3', name: 'logs-archive', size: '8 GB', objects: 320, region: 'local-1', access: 'private', createdAt: '2026-04-05' },
 ]
+
+export const bucketObjects: Record<string, BucketObject[]> = {
+  '1': [
+    { key: 'db/', size: '—', lastModified: '2026-05-20', type: 'folder' },
+    { key: 'vms/', size: '—', lastModified: '2026-05-18', type: 'folder' },
+    { key: 'db/postgres-2026-05-20.sql.gz', size: '1.2 GB', lastModified: '2026-05-20', type: 'file' },
+    { key: 'db/postgres-2026-05-19.sql.gz', size: '1.1 GB', lastModified: '2026-05-19', type: 'file' },
+    { key: 'db/postgres-2026-05-18.sql.gz', size: '1.1 GB', lastModified: '2026-05-18', type: 'file' },
+    { key: 'vms/web-01-snapshot.qcow2', size: '18 GB', lastModified: '2026-05-15', type: 'file' },
+    { key: 'vms/db-primary-snapshot.qcow2', size: '24 GB', lastModified: '2026-05-10', type: 'file' },
+    { key: 'README.txt', size: '1 KB', lastModified: '2026-03-01', type: 'file' },
+  ],
+  '2': [
+    { key: 'images/', size: '—', lastModified: '2026-05-21', type: 'folder' },
+    { key: 'videos/', size: '—', lastModified: '2026-05-19', type: 'folder' },
+    { key: 'fonts/', size: '—', lastModified: '2026-04-10', type: 'folder' },
+    { key: 'images/hero-banner.webp', size: '340 KB', lastModified: '2026-05-21', type: 'file' },
+    { key: 'images/logo.svg', size: '8 KB', lastModified: '2026-05-01', type: 'file' },
+    { key: 'images/og-image.png', size: '120 KB', lastModified: '2026-04-28', type: 'file' },
+    { key: 'videos/demo-reel.mp4', size: '420 MB', lastModified: '2026-05-19', type: 'file' },
+    { key: 'videos/tutorial-01.mp4', size: '280 MB', lastModified: '2026-05-10', type: 'file' },
+    { key: 'fonts/inter-var.woff2', size: '96 KB', lastModified: '2026-04-10', type: 'file' },
+  ],
+  '3': [
+    { key: '2026-05/', size: '—', lastModified: '2026-05-22', type: 'folder' },
+    { key: '2026-04/', size: '—', lastModified: '2026-04-30', type: 'folder' },
+    { key: '2026-03/', size: '—', lastModified: '2026-03-31', type: 'folder' },
+    { key: '2026-05/nginx-access-2026-05-22.log.gz', size: '14 MB', lastModified: '2026-05-22', type: 'file' },
+    { key: '2026-05/nginx-access-2026-05-21.log.gz', size: '12 MB', lastModified: '2026-05-21', type: 'file' },
+    { key: '2026-05/app-2026-05-22.log.gz', size: '4 MB', lastModified: '2026-05-22', type: 'file' },
+    { key: '2026-04/nginx-access-2026-04-30.log.gz', size: '11 MB', lastModified: '2026-04-30', type: 'file' },
+  ],
+}
 
 export const containers: Container[] = [
   { id: '1', name: 'nginx-proxy', image: 'nginx:1.25', status: 'running', ports: '80, 443', cpu: '0.2%', memory: '32 MB', uptime: '15d' },

@@ -33,6 +33,15 @@ type nodeResponse struct {
 	RegisteredAt time.Time `json:"registered_at"`
 }
 
+func (h *NodeHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := h.svc.Delete(r.Context(), id); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *NodeHandler) List(w http.ResponseWriter, r *http.Request) {
 	nodes, err := h.svc.List(r.Context())
 	if err != nil {

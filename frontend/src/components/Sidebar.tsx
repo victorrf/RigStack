@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Server, Package, Container, GitBranch,
-  Database, Network, Scale, Image, Shield, Zap
+  Database, Network, Scale, Image, Shield, Zap, Cpu
 } from 'lucide-react'
 
 const navGroups = [
@@ -13,6 +13,7 @@ const navGroups = [
     label: 'Compute',
     items: [
       { to: '/instances', label: 'Instances', icon: Server },
+      { to: '/nodes', label: 'Nodes', icon: Cpu },
     ],
   },
   {

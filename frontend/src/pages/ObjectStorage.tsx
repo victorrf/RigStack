@@ -1,4 +1,5 @@
-import { Package, Plus, Globe, Lock, Trash2, ExternalLink } from 'lucide-react'
+import { Package, Plus, Globe, Lock, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { buckets } from '../data/mock'
 import { useViewMode } from '../hooks/useViewMode'
 import { ViewToggle } from '../components/ViewToggle'
@@ -34,10 +35,10 @@ export function ObjectStorage() {
               {buckets.map(b => (
                 <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <Link to={`bucket/${b.id}`} relative="route" className="flex items-center gap-2 hover:text-orange-600 transition-colors">
                       <Package className="w-4 h-4 text-amber-500 flex-shrink-0" />
                       <span className="font-medium text-slate-800">{b.name}</span>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     {b.access === 'public'
@@ -50,14 +51,9 @@ export function ObjectStorage() {
                   <td className="px-4 py-3 text-slate-500 text-xs font-mono">{b.region}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{b.createdAt}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Abrir">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-                      <button className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Deletar">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <button className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Deletar">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -91,8 +87,12 @@ export function ObjectStorage() {
                 ))}
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
-                <button className="flex-1 text-xs text-orange-600 hover:text-orange-700 font-medium py-1">Abrir</button>
-                <button className="p-1 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                <Link to={`bucket/${b.id}`} relative="route" className="flex-1 text-xs text-orange-600 hover:text-orange-700 font-medium py-1 text-center">
+                  Abrir
+                </Link>
+                <button className="p-1 text-slate-400 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           ))}

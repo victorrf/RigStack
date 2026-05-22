@@ -9,13 +9,18 @@ export function RealDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([api.instances.list(), api.nodes.list()])
-      .then(([inst, nd]) => {
-        setInstances(inst ?? [])
-        setNodes(nd ?? [])
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+    const load = () =>
+      Promise.all([api.instances.list(), api.nodes.list()])
+        .then(([inst, nd]) => {
+          setInstances(inst ?? [])
+          setNodes(nd ?? [])
+        })
+        .catch(e => setError(e.message))
+        .finally(() => setLoading(false))
+
+    load()
+    const timer = setInterval(load, 15000)
+    return () => clearInterval(timer)
   }, [])
 
   if (loading) return <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Carregando...</div>

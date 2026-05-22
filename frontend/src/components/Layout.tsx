@@ -5,6 +5,7 @@ import { Bell, ChevronRight, MapPin } from 'lucide-react'
 const pageMeta: Record<string, { title: string; parent?: string }> = {
   '/': { title: 'Dashboard' },
   '/instances': { title: 'Instances', parent: 'Compute' },
+  '/nodes': { title: 'Nodes', parent: 'Compute' },
   '/storage': { title: 'Buckets', parent: 'Object Storage' },
   '/containers': { title: 'Containers', parent: 'Containers' },
   '/kubernetes': { title: 'Clusters', parent: 'Kubernetes' },
