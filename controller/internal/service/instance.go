@@ -116,7 +116,50 @@ func (s *InstanceService) UpdateStatus(ctx context.Context, id, status string) e
 	return s.store.UpdateStatus(ctx, id, status, "")
 }
 
+func (s *InstanceService) Start(ctx context.Context, id string) error {
+	inst, err := s.store.Get(ctx, id)
+	if err != nil {
+		return fmt.Errorf("instance not found: %w", err)
+	}
+	if err := s.store.UpdateStatus(ctx, id, "starting", ""); err != nil {
+		return err
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"vm_id": id,
+		"name":  inst.Name,
+		"force": false,
+	})
+	s.dispatcher.Enqueue(inst.NodeID, &pb.Command{Type: "start_vm", Payload: string(payload)})
+	return nil
+}
+
+func (s *InstanceService) Stop(ctx context.Context, id string) error {
+	inst, err := s.store.Get(ctx, id)
+	if err != nil {
+		return fmt.Errorf("instance not found: %w", err)
+	}
+	if err := s.store.UpdateStatus(ctx, id, "stopping", ""); err != nil {
+		return err
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"vm_id": id,
+		"name":  inst.Name,
+		"force": false,
+	})
+	s.dispatcher.Enqueue(inst.NodeID, &pb.Command{Type: "stop_vm", Payload: string(payload)})
+	return nil
+}
+
 func (s *InstanceService) Delete(ctx context.Context, id string) error {
+	inst, err := s.store.Get(ctx, id)
+	if err != nil {
+		return fmt.Errorf("instance not found: %w", err)
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"vm_id": id,
+		"name":  inst.Name,
+	})
+	s.dispatcher.Enqueue(inst.NodeID, &pb.Command{Type: "delete_vm", Payload: string(payload)})
 	return s.store.Delete(ctx, id)
 }
 

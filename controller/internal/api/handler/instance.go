@@ -107,7 +107,7 @@ func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if err := h.svc.UpdateStatus(r.Context(), id, "starting"); err != nil {
+	if err := h.svc.Start(r.Context(), id); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -116,7 +116,7 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 
 func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if err := h.svc.UpdateStatus(r.Context(), id, "stopping"); err != nil {
+	if err := h.svc.Stop(r.Context(), id); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
