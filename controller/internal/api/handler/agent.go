@@ -94,6 +94,9 @@ User=root
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=rigstack-agent
+
+[Install]
+WantedBy=multi-user.target
 SVCEOF
 
 systemctl daemon-reload
