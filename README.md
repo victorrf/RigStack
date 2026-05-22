@@ -158,7 +158,7 @@ apt install libvirt-daemon-system qemu-kvm genisoimage qemu-utils cloud-utils
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/rigstack.git
+git clone https://github.com/missa-thecreator/rigstack.git
 cd rigstack
 ```
 
