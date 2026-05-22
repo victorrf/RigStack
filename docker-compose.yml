@@ -32,8 +32,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # O frontend em desenvolvimento roda fora do Docker (npm run dev / porta 5173).
-  # Em produção, servir os arquivos estáticos de Vite via nginx ou CDN.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - controller
+    restart: unless-stopped
 
   # NOTA: O agent NÃO roda em Docker.
   # Ele precisa de acesso direto ao kernel (KVM, libvirt, ip netns, iptables).

@@ -169,8 +169,9 @@ cd rigstack
 docker compose up -d
 ```
 
-The controller starts on:
-- `http://localhost:8080` — REST API + frontend
+The full stack starts on:
+- `http://localhost` — Dashboard (nginx, port 80)
+- `http://localhost:8080` — REST API
 - `localhost:9090` — gRPC (for agents)
 
 Verify:
@@ -236,8 +237,16 @@ wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericclou
   -O /var/lib/rigstack/base/debian-12.qcow2
 ```
 
-### 5. Frontend (development)
+### 5. Frontend
 
+**Production** (included in `docker compose up -d`):
+```
+http://YOUR_IP        ← dashboard (nginx)
+http://YOUR_IP:8080   ← API directly (optional)
+YOUR_IP:9090          ← gRPC for agents
+```
+
+**Development** (hot reload):
 ```bash
 cd frontend
 npm install
@@ -292,7 +301,9 @@ curl -X POST http://localhost:8080/api/v1/instances \
 
 ```
 RigStack/
-├── frontend/              # React + Vite (dashboard)
+├── frontend/              # React + Vite (dashboard — nginx in production)
+│   ├── Dockerfile
+│   └── nginx.conf
 ├── controller/            # REST API + gRPC server (Go)
 │   ├── cmd/               # main.go
 │   ├── internal/
