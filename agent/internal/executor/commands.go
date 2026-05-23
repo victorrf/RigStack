@@ -25,6 +25,7 @@ type CreateVMCmd struct {
 	Prefix     int    `json:"prefix"`      // ex: 24
 	Gateway    string `json:"gateway"`     // IP do NAT GW da VPC
 	SSHPubKey  string `json:"ssh_pubkey"`
+	Password   string `json:"password"`    // senha do user rigstack (plain, hash feito no agent)
 }
 
 type VMCmd struct {

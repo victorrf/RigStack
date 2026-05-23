@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Terminal, BarChart2, Info, Play, Square, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Terminal, BarChart2, Info, Play, Square, RefreshCw, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -164,6 +164,23 @@ export function RealInstanceDetail() {
       {/* Overview */}
       {tab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Acesso */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 md:col-span-2">
+            <h3 className="text-sm font-semibold text-slate-700">Acesso</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <CredField label="Usuário" value="rigstack" mono />
+              <CredField label="Senha" value={instance.password || '—'} mono secret />
+              <CredField
+                label="Comando SSH"
+                value={instance.ip_address ? `ssh rigstack@${instance.ip_address.split('/')[0]}` : '— aguardando IP'}
+                mono
+              />
+            </div>
+            {!instance.ip_address && (
+              <p className="text-xs text-amber-600">IP ainda não atribuído — aguarde a VM iniciar.</p>
+            )}
+          </div>
+
           <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
             <h3 className="text-sm font-semibold text-slate-700">Identificação</h3>
             <Row label="ID" value={<span className="font-mono text-xs text-slate-500 break-all">{instance.id}</span>} />
@@ -228,6 +245,36 @@ export function RealInstanceDetail() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function CredField({ label, value, mono, secret }: { label: string; value: string; mono?: boolean; secret?: boolean }) {
+  const [visible, setVisible] = useState(!secret)
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <div className="flex items-center gap-2">
+        <span className={`flex-1 text-sm text-slate-800 truncate ${mono ? 'font-mono' : ''}`}>
+          {secret && !visible ? '••••••••••••' : value}
+        </span>
+        {secret && (
+          <button onClick={() => setVisible(v => !v)} className="text-slate-400 hover:text-slate-600">
+            {visible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </button>
+        )}
+        <button onClick={copy} className="text-slate-400 hover:text-slate-600">
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
     </div>
   )
 }

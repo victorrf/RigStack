@@ -27,6 +27,7 @@ type instanceResponse struct {
 	DiskGB    int       `json:"disk_gb"`
 	IPAddress string    `json:"ip_address"`
 	OSImage   string    `json:"os_image"`
+	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -61,6 +62,7 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 			DiskGB:    i.DiskGB,
 			IPAddress: i.IPAddress,
 			OSImage:   i.OSImage,
+			Password:  i.Password,
 			CreatedAt: i.CreatedAt,
 			UpdatedAt: i.UpdatedAt,
 		})

@@ -116,6 +116,7 @@ func (e *Executor) createVM(ctx context.Context, payload string) error {
 		Prefix:    cmd.Prefix,
 		Gateway:   cmd.Gateway,
 		SSHPubKey: cmd.SSHPubKey,
+		Password:  cmd.Password,
 	})
 	if err != nil {
 		_ = e.report(ctx, cmd.VMID, "error", "")

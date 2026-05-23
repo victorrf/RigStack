@@ -39,11 +39,13 @@ func PathsFor(vmID string) VMPaths {
 
 // CloudInitConfig contém os dados para gerar o cloud-init da VM.
 type CloudInitConfig struct {
-	Hostname  string
-	IPAddress string // ex: "10.0.1.10"
-	Prefix    int    // ex: 24
-	Gateway   string // ex: "10.0.1.1" (IP do NAT GW)
-	SSHPubKey string
+	Hostname     string
+	IPAddress    string // ex: "10.0.1.10"
+	Prefix       int    // ex: 24
+	Gateway      string // ex: "10.0.1.1" (IP do NAT GW)
+	SSHPubKey    string
+	Password     string // plain-text; hash SHA-512 gerado aqui antes de escrever no user-data
+	PasswordHash string // preenchido internamente por createCloudInitISO
 }
 
 // Provision cria o diretório, o disco qcow2 e o ISO de cloud-init para uma VM.
@@ -111,10 +113,33 @@ func (l *Local) createDisk(diskPath, baseImage string, sizeGB int) error {
 	return nil
 }
 
+// hashPassword gera um hash SHA-512 crypt via openssl para uso no cloud-init.
+func hashPassword(plain string) (string, error) {
+	out, err := exec.Command("openssl", "passwd", "-6", plain).Output()
+	if err != nil {
+		return "", fmt.Errorf("openssl passwd: %w", err)
+	}
+	// remove newline
+	h := string(out)
+	for len(h) > 0 && (h[len(h)-1] == '\n' || h[len(h)-1] == '\r') {
+		h = h[:len(h)-1]
+	}
+	return h, nil
+}
+
 // createCloudInitISO gera os arquivos cloud-init e empacota em um ISO.
 // Requer: genisoimage ou mkisofs instalado no node.
 func (l *Local) createCloudInitISO(paths VMPaths, ci CloudInitConfig) error {
 	l.logger.Info("creating cloud-init ISO", "hostname", ci.Hostname)
+
+	if ci.Password != "" {
+		h, err := hashPassword(ci.Password)
+		if err != nil {
+			l.logger.Warn("password hash failed, using empty password", "err", err)
+		} else {
+			ci.PasswordHash = h
+		}
+	}
 
 	// Gerar meta-data
 	metaData := fmt.Sprintf("instance-id: %s\nlocal-hostname: %s\n",
@@ -173,10 +198,21 @@ users:
   - name: rigstack
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
+    lock_passwd: false
+{{- if .PasswordHash }}
+    passwd: {{ .PasswordHash }}
+{{- end }}
+{{- if .SSHPubKey }}
     ssh_authorized_keys:
       - {{ .SSHPubKey }}
+{{- end }}
 
-package_update: true
+chpasswd:
+  expire: false
+
+ssh_pwauth: true
+
+package_update: false
 packages:
   - qemu-guest-agent
 

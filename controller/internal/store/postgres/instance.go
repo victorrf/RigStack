@@ -20,6 +20,7 @@ type Instance struct {
 	DiskGB    int
 	IPAddress string
 	OSImage   string
+	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -35,10 +36,10 @@ func NewInstanceStore(db *pgxpool.Pool) *InstanceStore {
 func (s *InstanceStore) Create(ctx context.Context, inst *Instance) (string, error) {
 	var id string
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO instances (name, status, node_id, vpc_id, vcpus, ram_mb, disk_gb, os_image)
-		VALUES ($1, 'pending', NULLIF($2,'')::uuid, NULLIF($3,'')::uuid, $4, $5, $6, $7)
+		INSERT INTO instances (name, status, node_id, vpc_id, vcpus, ram_mb, disk_gb, os_image, password)
+		VALUES ($1, 'pending', NULLIF($2,'')::uuid, NULLIF($3,'')::uuid, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, inst.Name, inst.NodeID, inst.VPCID, inst.VCPUs, inst.RAMMB, inst.DiskGB, inst.OSImage).Scan(&id)
+	`, inst.Name, inst.NodeID, inst.VPCID, inst.VCPUs, inst.RAMMB, inst.DiskGB, inst.OSImage, inst.Password).Scan(&id)
 	return id, err
 }
 
@@ -48,7 +49,7 @@ func (s *InstanceStore) List(ctx context.Context) ([]Instance, error) {
 		       COALESCE(node_id::text, ''), COALESCE(vpc_id::text, ''),
 		       COALESCE(subnet_id::text, ''),
 		       vcpus, ram_mb, disk_gb,
-		       COALESCE(ip_address::text, ''), os_image,
+		       COALESCE(ip_address::text, ''), os_image, COALESCE(password, ''),
 		       created_at, updated_at
 		FROM instances ORDER BY created_at DESC
 	`)
@@ -64,7 +65,7 @@ func (s *InstanceStore) List(ctx context.Context) ([]Instance, error) {
 			&i.ID, &i.Name, &i.Status,
 			&i.NodeID, &i.VPCID, &i.SubnetID,
 			&i.VCPUs, &i.RAMMB, &i.DiskGB,
-			&i.IPAddress, &i.OSImage,
+			&i.IPAddress, &i.OSImage, &i.Password,
 			&i.CreatedAt, &i.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -81,14 +82,14 @@ func (s *InstanceStore) Get(ctx context.Context, id string) (*Instance, error) {
 		       COALESCE(node_id::text, ''), COALESCE(vpc_id::text, ''),
 		       COALESCE(subnet_id::text, ''),
 		       vcpus, ram_mb, disk_gb,
-		       COALESCE(ip_address::text, ''), os_image,
+		       COALESCE(ip_address::text, ''), os_image, COALESCE(password, ''),
 		       created_at, updated_at
 		FROM instances WHERE id = $1
 	`, id).Scan(
 		&i.ID, &i.Name, &i.Status,
 		&i.NodeID, &i.VPCID, &i.SubnetID,
 		&i.VCPUs, &i.RAMMB, &i.DiskGB,
-		&i.IPAddress, &i.OSImage,
+		&i.IPAddress, &i.OSImage, &i.Password,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
 	if err != nil {

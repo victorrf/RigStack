@@ -37,6 +37,7 @@ export interface ApiInstance {
   disk_gb: number
   ip_address: string
   os_image: string
+  password: string
   created_at: string
   updated_at: string
 }

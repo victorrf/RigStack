@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net"
 	"strings"
 
@@ -12,6 +14,17 @@ import (
 	"github.com/rigstack/controller/internal/scheduler"
 	"github.com/rigstack/controller/internal/store/postgres"
 )
+
+const passwordChars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+func generatePassword(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(passwordChars))))
+		b[i] = passwordChars[n.Int64()]
+	}
+	return string(b)
+}
 
 type InstanceService struct {
 	store      *postgres.InstanceStore
@@ -93,14 +106,17 @@ func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest)
 		return nil, fmt.Errorf("allocate ip: %w", err)
 	}
 
+	password := generatePassword(12)
+
 	id, err := s.store.Create(ctx, &postgres.Instance{
-		Name:    req.Name,
-		NodeID:  node.ID,
-		VPCID:   req.VPCID,
-		VCPUs:   req.VCPUs,
-		RAMMB:   req.RAMMB,
-		DiskGB:  req.DiskGB,
-		OSImage: req.OSImage,
+		Name:     req.Name,
+		NodeID:   node.ID,
+		VPCID:    req.VPCID,
+		VCPUs:    req.VCPUs,
+		RAMMB:    req.RAMMB,
+		DiskGB:   req.DiskGB,
+		OSImage:  req.OSImage,
+		Password: password,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create instance: %w", err)
@@ -123,6 +139,7 @@ func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest)
 		"prefix":      prefix,
 		"gateway":     gw,
 		"ssh_pubkey":  req.SSHPubKey,
+		"password":    password,
 	})
 	s.dispatcher.Enqueue(node.ID, &pb.Command{Type: "create_vm", Payload: string(payload)})
 
