@@ -62,7 +62,10 @@ func (s *NodeStore) MarkUnreachable(ctx context.Context, id string) error {
 
 func (s *NodeStore) UpdateVMStatus(ctx context.Context, vmID, status, ip string) error {
 	_, err := s.db.Exec(ctx, `
-		UPDATE instances SET status = $2, ip_address = NULLIF($3, ''), updated_at = NOW()
+		UPDATE instances
+		SET status     = $2,
+		    ip_address = CASE WHEN $3 = '' THEN ip_address ELSE $3::inet END,
+		    updated_at = NOW()
 		WHERE id = $1
 	`, vmID, status, ip)
 	return err

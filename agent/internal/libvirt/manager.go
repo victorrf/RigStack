@@ -88,7 +88,8 @@ func (m *Manager) StartVM(name string) error {
 	return nil
 }
 
-// StopVM encerra uma VM. Se force=true usa destroy (hard reset); caso contrário shutdown gracioso.
+// StopVM encerra uma VM. Se force=true usa destroy imediato; caso contrário tenta
+// shutdown gracioso com ACPI e aguarda até 30s, forçando se necessário.
 func (m *Manager) StopVM(name string, force bool) error {
 	dom, err := m.getDomain(name)
 	if err != nil {
@@ -101,10 +102,29 @@ func (m *Manager) StopVM(name string, force bool) error {
 		m.logger.Info("VM force-stopped", "name", name)
 		return nil
 	}
+
 	if err := m.lv.DomainShutdown(dom); err != nil {
 		return fmt.Errorf("shutdown domain %q: %w", name, err)
 	}
-	m.logger.Info("VM shutdown requested", "name", name)
+	m.logger.Info("VM shutdown requested, waiting up to 30s", "name", name)
+
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		state, _, err := m.lv.DomainGetState(dom, 0)
+		if err != nil {
+			break
+		}
+		if libvirt.DomainState(state) == libvirt.DomainShutoff {
+			m.logger.Info("VM stopped gracefully", "name", name)
+			return nil
+		}
+	}
+
+	m.logger.Warn("graceful shutdown timed out, force stopping", "name", name)
+	if err := m.lv.DomainDestroy(dom); err != nil {
+		return fmt.Errorf("force stop domain %q: %w", name, err)
+	}
 	return nil
 }
 
