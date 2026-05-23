@@ -99,6 +99,28 @@ func (s *NodeStore) List(ctx context.Context) ([]Node, error) {
 	return nodes, rows.Err()
 }
 
+func (s *NodeStore) GetByID(ctx context.Context, id string) (*Node, error) {
+	var n Node
+	err := s.db.QueryRow(ctx, `
+		SELECT id, name, region, address, status,
+		       COALESCE(cpu_cores, 0), COALESCE(cpu_free_pct, 0),
+		       COALESCE(ram_bytes, 0), COALESCE(ram_free, 0),
+		       COALESCE(disk_bytes, 0), COALESCE(disk_free, 0),
+		       COALESCE(vm_count, 0), last_seen, registered_at
+		FROM nodes WHERE id = $1
+	`, id).Scan(
+		&n.ID, &n.Name, &n.Region, &n.Address, &n.Status,
+		&n.CPUCores, &n.CPUFreePct,
+		&n.RAMBytes, &n.RAMFree,
+		&n.DiskBytes, &n.DiskFree,
+		&n.VMCount, &n.LastSeen, &n.RegisteredAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
+}
+
 func (s *NodeStore) Delete(ctx context.Context, id string) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM nodes WHERE id = $1`, id)
 	return err

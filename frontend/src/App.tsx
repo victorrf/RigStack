@@ -18,6 +18,7 @@ import { IAM } from './pages/IAM'
 // Real pages (connected to API)
 import { RealDashboard } from './pages/real/Dashboard'
 import { RealInstances } from './pages/real/Instances'
+import { RealInstanceDetail } from './pages/real/InstanceDetail'
 import { RealNetwork } from './pages/real/Network'
 import { RealNodes } from './pages/real/Nodes'
 import { RealImages } from './pages/real/Images'
@@ -30,6 +31,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<RealDashboard />} />
           <Route path="/instances" element={<RealInstances />} />
+          <Route path="/instances/:id" element={<RealInstanceDetail />} />
           <Route path="/nodes" element={<RealNodes />} />
           <Route path="/network" element={<RealNetwork />} />
           <Route path="/storage" element={<ComingSoon feature="Object Storage" />} />

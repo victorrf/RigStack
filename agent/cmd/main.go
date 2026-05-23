@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rigstack/agent/internal/console"
 	"github.com/rigstack/agent/internal/controller"
 	"github.com/rigstack/agent/internal/executor"
 	"github.com/rigstack/agent/internal/libvirt"
@@ -71,6 +72,14 @@ func main() {
 
 	// --- Executor de comandos ---
 	exec := executor.New(lv, store, netMgr, client.ReportVMStatus, logger)
+
+	// --- Console/metrics HTTP server ---
+	consoleSrv := console.NewServer(lv, logger)
+	go func() {
+		if err := consoleSrv.Start(":9090"); err != nil {
+			logger.Error("console server error", "err", err)
+		}
+	}()
 
 	// --- Heartbeat loop com reconexão automática ---
 	logger.Info("starting heartbeat loop", "interval", "10s")

@@ -6,6 +6,7 @@ const pageMeta: Record<string, { title: string; parent?: string }> = {
   '/': { title: 'Dashboard' },
   '/instances': { title: 'Instances', parent: 'Compute' },
   '/nodes': { title: 'Nodes', parent: 'Compute' },
+  '/instances/:id': { title: 'Instance Detail', parent: 'Compute' },
   '/storage': { title: 'Buckets', parent: 'Object Storage' },
   '/containers': { title: 'Containers', parent: 'Containers' },
   '/kubernetes': { title: 'Clusters', parent: 'Kubernetes' },
@@ -23,7 +24,9 @@ interface LayoutProps {
 export function Layout({ basePath = '' }: LayoutProps) {
   const location = useLocation()
   const rawPath = basePath ? location.pathname.slice(basePath.length) || '/' : location.pathname
-  const meta = pageMeta[rawPath] ?? { title: rawPath }
+  // Normaliza rotas dinâmicas: /instances/abc-123 → /instances/:id
+  const normalizedPath = rawPath.replace(/^(\/[^/]+)\/[^/]+$/, '$1/:id')
+  const meta = pageMeta[rawPath] ?? pageMeta[normalizedPath] ?? { title: rawPath }
   const isDemo = basePath !== ''
 
   return (

@@ -16,6 +16,7 @@ import (
 type InstanceService struct {
 	store      *postgres.InstanceStore
 	vpcs       *postgres.VPCStore
+	nodes      *postgres.NodeStore
 	scheduler  *scheduler.Scheduler
 	dispatcher *dispatcher.Dispatcher
 }
@@ -23,10 +24,34 @@ type InstanceService struct {
 func NewInstanceService(
 	store *postgres.InstanceStore,
 	vpcs *postgres.VPCStore,
+	nodes *postgres.NodeStore,
 	sched *scheduler.Scheduler,
 	disp *dispatcher.Dispatcher,
 ) *InstanceService {
-	return &InstanceService{store: store, vpcs: vpcs, scheduler: sched, dispatcher: disp}
+	return &InstanceService{store: store, vpcs: vpcs, nodes: nodes, scheduler: sched, dispatcher: disp}
+}
+
+// NodeAddressForInstance retorna host:porta do agente no node que hospeda a instância.
+func (s *InstanceService) NodeAddressForInstance(ctx context.Context, instanceID string) (vmName, nodeAddr string, err error) {
+	inst, err := s.store.Get(ctx, instanceID)
+	if err != nil {
+		return "", "", fmt.Errorf("instance not found: %w", err)
+	}
+	node, err := s.nodes.GetByID(ctx, inst.NodeID)
+	if err != nil {
+		return "", "", fmt.Errorf("node not found: %w", err)
+	}
+	// Node address is stored as host:grpcPort; console server runs on :9090
+	host := node.Address
+	if idx := len(host) - 1; idx >= 0 {
+		for i := len(host) - 1; i >= 0; i-- {
+			if host[i] == ':' {
+				host = host[:i]
+				break
+			}
+		}
+	}
+	return inst.Name, host + ":9090", nil
 }
 
 type CreateInstanceRequest struct {

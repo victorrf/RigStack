@@ -98,6 +98,7 @@ export const api = {
     start: (id: string) => req<{ status: string }>(`/api/v1/instances/${id}/start`, { method: 'PUT' }),
     stop: (id: string) => req<{ status: string }>(`/api/v1/instances/${id}/stop`, { method: 'PUT' }),
     delete: (id: string) => req<void>(`/api/v1/instances/${id}`, { method: 'DELETE' }),
+    metrics: (id: string) => req<{ cpu_pct: number; ram_mb: number; time: string }>(`/api/v1/instances/${id}/metrics`),
   },
 }
 

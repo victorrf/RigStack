@@ -15,6 +15,7 @@ func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *
 	nh := handler.NewNodeHandler(nodes)
 	vh := handler.NewVPCHandler(vpcs)
 	ih := handler.NewInstanceHandler(instances)
+	ch := handler.NewConsoleHandler(instances)
 	imgh := handler.NewImageHandler(images)
 
 	mux.HandleFunc("GET /api/v1/nodes", nh.List)
@@ -32,6 +33,8 @@ func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *
 	mux.HandleFunc("PUT /api/v1/instances/{id}/start", ih.Start)
 	mux.HandleFunc("PUT /api/v1/instances/{id}/stop", ih.Stop)
 	mux.HandleFunc("DELETE /api/v1/instances/{id}", ih.Delete)
+	mux.HandleFunc("GET /api/v1/instances/{id}/console", ch.Console)
+	mux.HandleFunc("GET /api/v1/instances/{id}/metrics", ch.Metrics)
 
 	// Healthcheck
 	// Healthcheck

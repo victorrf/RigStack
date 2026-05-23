@@ -2,9 +2,11 @@ package libvirt
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/digitalocean/go-libvirt"
@@ -181,6 +183,83 @@ func (m *Manager) GetNodeStats(_ context.Context) (NodeStats, error) {
 		RAMTotal:  memKB * 1024, // libvirt retorna em KB
 		RAMFree:   freeMem,
 		VMRunning: running,
+	}, nil
+}
+
+// VMStats contém métricas de CPU e RAM de uma VM individual.
+type VMStats struct {
+	CPUPct float64 // percentual de CPU usado (média desde o boot)
+	RAMMB  int     // RAM atual em uso pela VM (MB)
+}
+
+// GetConsolePTY retorna o caminho do dispositivo PTY do console serial da VM.
+// Só funciona enquanto a VM está rodando (libvirt popula o path após o boot).
+func (m *Manager) GetConsolePTY(name string) (string, error) {
+	dom, err := m.getDomain(name)
+	if err != nil {
+		return "", err
+	}
+	xmlStr, err := m.lv.DomainGetXMLDesc(dom, 0)
+	if err != nil {
+		return "", fmt.Errorf("get xml desc %q: %w", name, err)
+	}
+
+	var domXML struct {
+		Devices struct {
+			Consoles []struct {
+				Type   string `xml:"type,attr"`
+				Source struct {
+					Path string `xml:"path,attr"`
+				} `xml:"source"`
+			} `xml:"console"`
+		} `xml:"devices"`
+	}
+	if err := xml.Unmarshal([]byte(xmlStr), &domXML); err != nil {
+		return "", fmt.Errorf("parse domain xml: %w", err)
+	}
+	for _, c := range domXML.Devices.Consoles {
+		if c.Type == "pty" && strings.HasPrefix(c.Source.Path, "/dev/pts/") {
+			return c.Source.Path, nil
+		}
+	}
+	return "", fmt.Errorf("no pty console found for domain %q", name)
+}
+
+// GetVMStats retorna CPU% instantâneo e RAM usada da VM.
+func (m *Manager) GetVMStats(name string) (VMStats, error) {
+	dom, err := m.getDomain(name)
+	if err != nil {
+		return VMStats{}, err
+	}
+
+	state, maxMemKB, memKB, nCPU, cpuNs, err := m.lv.DomainGetInfo(dom)
+	if err != nil {
+		return VMStats{}, fmt.Errorf("domain get info %q: %w", name, err)
+	}
+	if libvirt.DomainState(state) != libvirt.DomainRunning {
+		return VMStats{}, nil
+	}
+
+	t1 := time.Now()
+	time.Sleep(500 * time.Millisecond)
+
+	_, _, _, _, cpuNs2, err := m.lv.DomainGetInfo(dom)
+	if err != nil {
+		return VMStats{}, fmt.Errorf("domain get info (2nd sample) %q: %w", name, err)
+	}
+	elapsed := time.Since(t1).Seconds()
+
+	cpuPct := 0.0
+	if elapsed > 0 && nCPU > 0 {
+		cpuPct = float64(cpuNs2-cpuNs) / (elapsed * 1e9 * float64(nCPU)) * 100
+	}
+	if cpuPct > 100 {
+		cpuPct = 100
+	}
+	_ = maxMemKB
+	return VMStats{
+		CPUPct: cpuPct,
+		RAMMB:  int(memKB / 1024),
 	}, nil
 }
 

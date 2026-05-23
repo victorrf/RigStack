@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/digitalocean/go-libvirt v0.0.0-20221205150000-2939327a8519 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Plus, Search, Play, Square, Trash2, X, RefreshCw } from 'lucide-react'
 import { api, fmtRam, type ApiInstance, type ApiVPC } from '../../api/client'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -145,7 +146,9 @@ export function RealInstances() {
             )}
             {filtered.map(i => (
               <tr key={i.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-slate-800">{i.name}</td>
+                <td className="px-4 py-3 font-medium text-slate-800">
+                  <Link to={`/instances/${i.id}`} className="hover:text-orange-600 transition-colors">{i.name}</Link>
+                </td>
                 <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
                 <td className="px-4 py-3 text-slate-600">{i.vcpus}</td>
                 <td className="px-4 py-3 text-slate-600">{fmtRam(i.ram_mb)}</td>

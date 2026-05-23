@@ -49,7 +49,7 @@ func main() {
 	// Services
 	nodeSvc := service.NewNodeService(nodeStore)
 	vpcSvc := service.NewVPCService(vpcStore, sched, disp)
-	instanceSvc := service.NewInstanceService(instanceStore, vpcStore, sched, disp)
+	instanceSvc := service.NewInstanceService(instanceStore, vpcStore, nodeStore, sched, disp)
 	imageSvc := service.NewImageService(sched, disp)
 
 	// gRPC server — roda em goroutine, usa o dispatcher para entregar comandos
