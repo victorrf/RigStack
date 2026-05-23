@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Play, Square, Trash2, X, RefreshCw } from 'lucide-react'
+import { Plus, Search, Play, Square, Trash2, X, RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react'
 import { api, fmtRam, type ApiInstance, type ApiVPC } from '../../api/client'
 import { StatusBadge } from '../../components/StatusBadge'
 
@@ -16,6 +16,8 @@ const FLAVORS = [
   { label: 'Medium', vcpus: 4, ram_mb: 8192, disk_gb: 50 },
 ]
 
+const TRANSITION_STATES = new Set(['starting', 'stopping', 'terminating', 'pending'])
+
 export function RealInstances() {
   const [instances, setInstances] = useState<ApiInstance[]>([])
   const [vpcs, setVpcs] = useState<ApiVPC[]>([])
@@ -26,6 +28,7 @@ export function RealInstances() {
   const [showModal, setShowModal] = useState(false)
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ name: '', vpc_id: '', os: OS_OPTIONS[0].value, flavor: 1, ssh_pubkey: '' })
+  const [deleteTarget, setDeleteTarget] = useState<ApiInstance | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -57,10 +60,14 @@ export function RealInstances() {
     load()
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Deletar esta instância?')) return
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    setDeleteTarget(null)
+    // Otimisticamente muda para "terminating" antes da confirmação do servidor
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'terminating' } : i))
     await api.instances.delete(id).catch(() => null)
-    load()
+    setTimeout(load, 1500)
   }
 
   async function handleCreate() {
@@ -87,12 +94,14 @@ export function RealInstances() {
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Carregando...</div>
+  if (loading && instances.length === 0) return <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Carregando...</div>
   if (error) return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
       Erro ao conectar com o controller: <span className="font-mono">{error}</span>
     </div>
   )
+
+  const vpcMap = Object.fromEntries(vpcs.map(v => [v.id, v]))
 
   return (
     <div className="space-y-4">
@@ -144,38 +153,63 @@ export function RealInstances() {
             {filtered.length === 0 && (
               <tr><td colSpan={8} className="text-center py-10 text-slate-400">Nenhuma instância encontrada</td></tr>
             )}
-            {filtered.map(i => (
-              <tr key={i.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-slate-800">
-                  <Link to={`/instances/${i.id}`} className="hover:text-orange-600 transition-colors">{i.name}</Link>
-                </td>
-                <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
-                <td className="px-4 py-3 text-slate-600">{i.vcpus}</td>
-                <td className="px-4 py-3 text-slate-600">{fmtRam(i.ram_mb)}</td>
-                <td className="px-4 py-3 text-slate-600">{i.disk_gb} GB</td>
-                <td className="px-4 py-3 text-slate-500 font-mono text-xs">{i.ip_address || '—'}</td>
-                <td className="px-4 py-3 text-slate-500">{i.os_image}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    {i.status === 'running'
-                      ? <button onClick={() => handleStop(i.id)} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Parar">
-                          <Square className="w-3.5 h-3.5" />
-                        </button>
-                      : <button onClick={() => handleStart(i.id)} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Iniciar">
-                          <Play className="w-3.5 h-3.5" />
-                        </button>
-                    }
-                    <button onClick={() => handleDelete(i.id)} className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="Deletar">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(i => {
+              const inTransition = TRANSITION_STATES.has(i.status)
+              return (
+                <tr key={i.id} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/instances/${i.id}`}
+                      className="inline-flex items-center gap-1 font-semibold text-orange-600 hover:text-orange-700 underline underline-offset-2 decoration-orange-300 hover:decoration-orange-500 transition-colors"
+                    >
+                      {i.name}
+                      <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
+                  <td className="px-4 py-3 text-slate-600">{i.vcpus}</td>
+                  <td className="px-4 py-3 text-slate-600">{fmtRam(i.ram_mb)}</td>
+                  <td className="px-4 py-3 text-slate-600">{i.disk_gb} GB</td>
+                  <td className="px-4 py-3 text-slate-500 font-mono text-xs">{i.ip_address || '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{i.os_image}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {i.status === 'running'
+                        ? <button
+                            onClick={() => handleStop(i.id)}
+                            disabled={inTransition}
+                            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Parar"
+                          >
+                            <Square className="w-3.5 h-3.5" />
+                          </button>
+                        : <button
+                            onClick={() => handleStart(i.id)}
+                            disabled={inTransition}
+                            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Iniciar"
+                          >
+                            <Play className="w-3.5 h-3.5" />
+                          </button>
+                      }
+                      <button
+                        onClick={() => setDeleteTarget(i)}
+                        disabled={inTransition}
+                        className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Terminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
 
+      {/* Modal: Criar instância */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -265,6 +299,65 @@ export function RealInstances() {
           </div>
         </div>
       )}
+
+      {/* Modal: Confirmar exclusão */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-4 mb-5">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-slate-800 font-semibold text-lg">Terminar instância</h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Esta ação é irreversível. A instância será terminada e todos os dados do disco serão perdidos.
+                </p>
+              </div>
+              <button onClick={() => setDeleteTarget(null)} className="ml-auto p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 flex-shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-lg border border-slate-200 divide-y divide-slate-200 mb-5 text-sm overflow-hidden">
+              <DetailRow label="Instância" value={<span className="font-semibold text-slate-800">{deleteTarget.name}</span>} />
+              <DetailRow label="ID" value={<span className="font-mono text-xs text-slate-500 break-all">{deleteTarget.id}</span>} />
+              <DetailRow label="Status" value={<StatusBadge status={deleteTarget.status} />} />
+              <DetailRow label="IP" value={<span className="font-mono text-xs">{deleteTarget.ip_address || '—'}</span>} />
+              <DetailRow label="VPC" value={
+                <span className="font-mono text-xs text-slate-500">
+                  {vpcMap[deleteTarget.vpc_id]
+                    ? `${vpcMap[deleteTarget.vpc_id].name} (${vpcMap[deleteTarget.vpc_id].cidr})`
+                    : deleteTarget.vpc_id || '—'}
+                </span>
+              } />
+              <DetailRow label="OS" value={deleteTarget.os_image} />
+              <DetailRow label="Recursos" value={`${deleteTarget.vcpus} vCPU · ${fmtRam(deleteTarget.ram_mb)} · ${deleteTarget.disk_gb} GB`} />
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Terminar instância
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5">
+      <span className="text-slate-500 shrink-0 mr-4">{label}</span>
+      <span className="text-slate-800 text-right">{value}</span>
     </div>
   )
 }

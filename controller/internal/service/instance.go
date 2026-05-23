@@ -197,6 +197,7 @@ func (s *InstanceService) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("instance not found: %w", err)
 	}
+	_ = s.store.UpdateStatus(ctx, id, "terminating", "")
 	payload, _ := json.Marshal(map[string]any{
 		"vm_id": id,
 		"name":  inst.Name,
