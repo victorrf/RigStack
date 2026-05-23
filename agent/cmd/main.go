@@ -81,6 +81,9 @@ func main() {
 		}
 	}()
 
+	// --- Reconciliação de estado das VMs ao iniciar ---
+	go reconcileVMs(ctx, lv, client, logger)
+
 	// --- Heartbeat loop com reconexão automática ---
 	logger.Info("starting heartbeat loop", "interval", "10s")
 	for {
@@ -171,6 +174,34 @@ func collectStats(ctx context.Context, lv *libvirt.Manager, logger *slog.Logger)
 		RAMFree:    int64(stats.RAMFree),
 		DiskFree:   0, // fase B: ler via syscall.Statfs
 		VMCount:    int32(stats.VMRunning),
+	}
+}
+
+// reconcileVMs reporta o estado atual de todas as VMs ao controller logo após o boot do agente.
+// Isso corrige desincronias causadas por quedas do agente durante a criação de VMs.
+func reconcileVMs(ctx context.Context, lv *libvirt.Manager, client *controller.Client, logger *slog.Logger) {
+	if lv == nil {
+		return
+	}
+	// Aguarda um pouco para o heartbeat se estabelecer
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(5 * time.Second):
+	}
+
+	infos, err := lv.ListVMInfos()
+	if err != nil {
+		logger.Warn("reconcile: failed to list VMs", "err", err)
+		return
+	}
+
+	for _, vm := range infos {
+		if err := client.ReportVMStatus(ctx, vm.ID, vm.Status, ""); err != nil {
+			logger.Warn("reconcile: failed to report vm status", "vm", vm.Name, "err", err)
+		} else {
+			logger.Info("reconcile: reported vm status", "vm", vm.Name, "status", vm.Status)
+		}
 	}
 }
 

@@ -145,6 +145,13 @@ func (m *Manager) GetVMStatus(name string) (string, error) {
 	return domainStateString(libvirt.DomainState(state)), nil
 }
 
+// VMInfo representa o estado de uma VM no libvirt para reconciliação.
+type VMInfo struct {
+	ID     string // UUID da VM (= instance ID no controller)
+	Name   string
+	Status string // "running" | "stopped" | "error"
+}
+
 // ListVMs retorna os nomes de todos os domínios (rodando ou não) gerenciados por este node.
 func (m *Manager) ListVMs() ([]string, error) {
 	domains, _, err := m.lv.ConnectListAllDomains(1,
@@ -157,6 +164,32 @@ func (m *Manager) ListVMs() ([]string, error) {
 		names = append(names, d.Name)
 	}
 	return names, nil
+}
+
+// ListVMInfos retorna ID (UUID), nome e status de todas as VMs — usado na reconciliação.
+func (m *Manager) ListVMInfos() ([]VMInfo, error) {
+	domains, _, err := m.lv.ConnectListAllDomains(1,
+		libvirt.ConnectListDomainsActive|libvirt.ConnectListDomainsInactive)
+	if err != nil {
+		return nil, fmt.Errorf("list domains: %w", err)
+	}
+	infos := make([]VMInfo, 0, len(domains))
+	for _, d := range domains {
+		state, _, err := m.lv.DomainGetState(d, 0)
+		if err != nil {
+			continue
+		}
+		// UUID vem como [16]byte — converte para string UUID
+		u := d.UUID
+		id := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+			u[0:4], u[4:6], u[6:8], u[8:10], u[10:16])
+		infos = append(infos, VMInfo{
+			ID:     id,
+			Name:   d.Name,
+			Status: domainStateString(libvirt.DomainState(state)),
+		})
+	}
+	return infos, nil
 }
 
 // GetNodeStats retorna métricas de CPU e RAM do node para o heartbeat.
