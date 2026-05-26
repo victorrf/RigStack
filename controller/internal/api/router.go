@@ -37,7 +37,6 @@ func NewRouter(nodes *service.NodeService, vpcs *service.VPCService, instances *
 	mux.HandleFunc("GET /api/v1/instances/{id}/metrics", ch.Metrics)
 
 	// Healthcheck
-	// Healthcheck
 	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))

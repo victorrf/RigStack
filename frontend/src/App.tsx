@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ComingSoon } from './components/ComingSoon'
+import { HealthGate } from './components/HealthGate'
 
 // Mock pages (live demo)
 import { Dashboard } from './pages/Dashboard'
@@ -25,6 +26,7 @@ import { RealImages } from './pages/real/Images'
 
 export default function App() {
   return (
+    <HealthGate>
     <BrowserRouter>
       <Routes>
         {/* Real API routes */}
@@ -59,5 +61,6 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </HealthGate>
   )
 }
