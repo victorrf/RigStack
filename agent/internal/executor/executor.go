@@ -100,6 +100,15 @@ func (e *Executor) createVM(ctx context.Context, payload string) error {
 
 	_ = e.report(ctx, cmd.VMID, "pending", "")
 
+	// Garante que a bridge da VPC existe antes de criar a VM.
+	// Cria bridge + NAT caso o node ainda não tenha para esta VPC.
+	if e.net != nil && cmd.VpcID != "" && cmd.VpcCIDR != "" {
+		if err := e.net.EnsureBridge(cmd.VpcID, cmd.VpcCIDR); err != nil {
+			_ = e.report(ctx, cmd.VMID, "error", "")
+			return fmt.Errorf("ensure bridge for vpc: %w", err)
+		}
+	}
+
 	if !safeImageName.MatchString(cmd.OSImage) {
 		return fmt.Errorf("invalid os_image name: %q", cmd.OSImage)
 	}

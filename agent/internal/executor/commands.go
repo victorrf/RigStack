@@ -21,6 +21,8 @@ type CreateVMCmd struct {
 	DiskGB     int    `json:"disk_gb"`
 	OSImage    string `json:"os_image"`    // ex: "ubuntu-24.04" → base: /var/lib/rigstack/base/ubuntu-24.04.qcow2
 	BridgeName string `json:"bridge_name"` // ex: "rs-br-abc123"
+	VpcID      string `json:"vpc_id"`      // para recriar bridge se necessário
+	VpcCIDR    string `json:"vpc_cidr"`    // subnet da VPC (ex: "10.0.1.0/24")
 	IPAddress  string `json:"ip_address"`  // ex: "10.0.1.10"
 	Prefix     int    `json:"prefix"`      // ex: 24
 	Gateway    string `json:"gateway"`     // IP do NAT GW da VPC

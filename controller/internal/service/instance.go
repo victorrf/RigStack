@@ -135,6 +135,8 @@ func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest)
 		"disk_gb":     req.DiskGB,
 		"os_image":    req.OSImage,
 		"bridge_name": bridgeName(req.VPCID),
+		"vpc_id":      req.VPCID,
+		"vpc_cidr":    vpc.CIDR,
 		"ip_address":  ip,
 		"prefix":      prefix,
 		"gateway":     gw,
