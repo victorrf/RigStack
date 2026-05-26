@@ -124,6 +124,7 @@ func (e *Executor) createVM(ctx context.Context, payload string) error {
 		IPAddress: cmd.IPAddress,
 		Prefix:    cmd.Prefix,
 		Gateway:   cmd.Gateway,
+		MAC:       mac,
 		SSHPubKey: cmd.SSHPubKey,
 		Password:  cmd.Password,
 	})

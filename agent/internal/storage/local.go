@@ -43,6 +43,7 @@ type CloudInitConfig struct {
 	IPAddress    string // ex: "10.0.1.10"
 	Prefix       int    // ex: 24
 	Gateway      string // ex: "10.0.1.1" (IP do NAT GW)
+	MAC          string // ex: "52:54:00:ab:cd:ef" — usado para matchear interface no netplan
 	SSHPubKey    string
 	Password     string // plain-text; hash SHA-512 gerado aqui antes de escrever no user-data
 	PasswordHash string // preenchido internamente por createCloudInitISO
@@ -222,10 +223,15 @@ runcmd:
 
 var networkConfigTmpl = template.Must(template.New("network-config").Parse(`version: 2
 ethernets:
-  eth0:
+  primary:
+    match:
+      macaddress: "{{ .MAC }}"
+    set-name: eth0
     addresses:
       - {{ .IPAddress }}/{{ .Prefix }}
-    gateway4: {{ .Gateway }}
+    routes:
+      - to: default
+        via: {{ .Gateway }}
     nameservers:
       addresses:
         - 8.8.8.8
