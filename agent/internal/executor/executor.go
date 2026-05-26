@@ -148,6 +148,13 @@ func (e *Executor) startVM(ctx context.Context, payload string) error {
 	if err := json.Unmarshal([]byte(payload), &cmd); err != nil {
 		return fmt.Errorf("parse start_vm payload: %w", err)
 	}
+	// Recriar bridge caso tenha sumido após reboot do node
+	if e.net != nil && cmd.VpcID != "" && cmd.VpcCIDR != "" {
+		if err := e.net.EnsureBridge(cmd.VpcID, cmd.VpcCIDR); err != nil {
+			_ = e.report(ctx, cmd.VMID, "error", "")
+			return fmt.Errorf("ensure bridge: %w", err)
+		}
+	}
 	e.logger.Info("starting VM", "name", cmd.Name)
 	if err := e.lv.StartVM(cmd.Name); err != nil {
 		_ = e.report(ctx, cmd.VMID, "error", "")

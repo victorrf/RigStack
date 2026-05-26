@@ -163,13 +163,19 @@ func (s *InstanceService) Start(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("instance not found: %w", err)
 	}
+	vpc, err := s.vpcs.Get(ctx, inst.VPCID)
+	if err != nil {
+		return fmt.Errorf("vpc not found: %w", err)
+	}
 	if err := s.store.UpdateStatus(ctx, id, "starting", ""); err != nil {
 		return err
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"vm_id": id,
-		"name":  inst.Name,
-		"force": false,
+		"vm_id":    id,
+		"name":     inst.Name,
+		"force":    false,
+		"vpc_id":   inst.VPCID,
+		"vpc_cidr": vpc.CIDR,
 	})
 	s.dispatcher.Enqueue(inst.NodeID, &pb.Command{Type: "start_vm", Payload: string(payload)})
 	return nil

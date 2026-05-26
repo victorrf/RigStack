@@ -57,6 +57,28 @@ func (m *Manager) DeleteVPC(vpcID, cidr string) error {
 // BridgeName retorna o nome da bridge Linux para uma VPC.
 func BridgeName(vpcID string) string { return "rs-br-" + slug(vpcID) }
 
+// EnsureBridge garante que a bridge e o NAT da VPC existem no node.
+// Idempotente: não faz nada se a bridge já existir.
+// Necessário após reboot do node, pois bridges criadas via ip link não persistem.
+func (m *Manager) EnsureBridge(vpcID, cidr string) error {
+	name := BridgeName(vpcID)
+	out, _ := exec.Command("ip", "link", "show", name).Output()
+	if len(out) > 0 {
+		return nil // bridge já existe
+	}
+	gw, prefix, err := subnetInfo(cidr)
+	if err != nil {
+		return err
+	}
+	if err := createBridge(vpcID, gw, prefix); err != nil {
+		return fmt.Errorf("recreate bridge: %w", err)
+	}
+	_ = run("sysctl", "-w", "net.ipv4.ip_forward=1")
+	_ = addMasquerade(cidr, m.uplink)
+	m.logger.Info("bridge recreated after reboot", "vpc_id", vpcID, "bridge", name)
+	return nil
+}
+
 func netnsName(vpcID string) string { return "rs-natgw-" + slug(vpcID) }
 
 // slug retorna até 9 chars do ID sem hífens — suficiente para nomes únicos

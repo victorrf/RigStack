@@ -29,7 +29,9 @@ type CreateVMCmd struct {
 }
 
 type VMCmd struct {
-	VMID  string `json:"vm_id"`
-	Name  string `json:"name"`
-	Force bool   `json:"force"` // usado em stop_vm: true = destroy, false = shutdown gracioso
+	VMID    string `json:"vm_id"`
+	Name    string `json:"name"`
+	Force   bool   `json:"force"`    // usado em stop_vm: true = destroy, false = shutdown gracioso
+	VpcID   string `json:"vpc_id"`   // usado em start_vm para recriar bridge se sumiu após reboot
+	VpcCIDR string `json:"vpc_cidr"` // subnet da VPC para recriar NAT
 }
